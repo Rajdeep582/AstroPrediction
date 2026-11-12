@@ -17,8 +17,8 @@ def setting(name: str, default: str = "") -> str:
 
 MONGODB_URI = setting("MONGODB_URI")
 MONGODB_DB_NAME = setting("MONGODB_DB_NAME", "jyotish_studio")
-API_HOST = setting("API_HOST", "127.0.0.1")
-API_PORT = int(setting("API_PORT", "8800"))
+API_HOST = setting("API_HOST") or setting("HOST", "0.0.0.0")
+API_PORT = int(setting("PORT") or setting("API_PORT", "8800"))
 FRONTEND_ORIGINS = [x.strip() for x in setting("FRONTEND_ORIGINS", "http://localhost:4000,http://127.0.0.1:4000").split(",") if x.strip()]
 SWISSEPH_EPHE_PATH = setting("SWISSEPH_EPHE_PATH")
 SESSION_HTTPS_ONLY = setting("SESSION_HTTPS_ONLY", "false").lower() == "true"

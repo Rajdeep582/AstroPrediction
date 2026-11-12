@@ -129,6 +129,7 @@ app.include_router(jyotish_router)
 
 SESSION_COOKIE = "jyotish_session"
 SESSION_LIFETIME = 60 * 60 * 24 * 14
+COOKIE_SAMESITE = "none" if SESSION_HTTPS_ONLY else "lax"
 
 
 async def require_db():
@@ -200,7 +201,7 @@ async def issue_session(db, user_id: str, request: Request, response: Response):
         path="/",
         secure=SESSION_HTTPS_ONLY,
         httponly=True,
-        samesite="lax",
+        samesite=COOKIE_SAMESITE,
     )
 
 
@@ -270,7 +271,7 @@ async def signout(request: Request, response: Response):
         path="/",
         secure=SESSION_HTTPS_ONLY,
         httponly=True,
-        samesite="lax",
+        samesite=COOKIE_SAMESITE,
     )
     return {"signed_out": True}
 
@@ -499,7 +500,7 @@ async def delete_account(request: Request, response: Response, user: dict = Depe
         await db[name].delete_many({"owner_id": user["id"]})
     await db.sessions.delete_many({"user_id": user["id"]})
     await db.users.delete_one({"id": user["id"]})
-    response.delete_cookie(key=SESSION_COOKIE, path="/", secure=SESSION_HTTPS_ONLY, httponly=True, samesite="lax")
+    response.delete_cookie(key=SESSION_COOKIE, path="/", secure=SESSION_HTTPS_ONLY, httponly=True, samesite=COOKIE_SAMESITE)
     return {"deleted": True}
 
 
