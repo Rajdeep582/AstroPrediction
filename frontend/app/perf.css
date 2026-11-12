@@ -1,0 +1,41 @@
+/* ───────── Scroll performance pass (loaded last) ─────────
+   Same visuals, but nothing repaints while you scroll. */
+
+/* 1. background-attachment:fixed forces a full repaint on every scroll frame → paint the gradient on a fixed layer instead. */
+body { background: #05050d !important; }
+.sky { background: radial-gradient(1100px 760px at 78% -8%, #2a1d5c 0%, transparent 60%), radial-gradient(900px 700px at -8% 108%, #2b1a4f 0%, transparent 55%),
+  radial-gradient(700px 500px at 50% 50%, rgba(80,52,150,.18), transparent 70%), linear-gradient(180deg, #0b0a1d, #05050d); contain: strict; transform: translateZ(0); }
+
+/* 2. Aurora: an 80px blur on a moving full-screen layer is the single most expensive effect. Keep it static, pre-softened. */
+body::before { animation: none !important; filter: none !important; opacity: .55;
+  background: radial-gradient(30% 24% at 18% 22%, rgba(155,120,255,.22), transparent 75%), radial-gradient(28% 22% at 82% 18%, rgba(233,199,125,.12), transparent 75%),
+    radial-gradient(36% 28% at 62% 82%, rgba(111,82,224,.24), transparent 75%), radial-gradient(22% 18% at 28% 86%, rgba(233,199,125,.1), transparent 75%) !important; }
+
+/* 3. Constellation canvas: blend modes force the whole page to recomposite. Plain alpha looks the same on a dark sky. */
+.constellations { mix-blend-mode: normal !important; }
+
+/* 4. Infinite gradient pans on text/buttons repaint every frame. Keep the gradient, animate only on hover. */
+/* slow gradient drift on page titles only (small repaint area) */
+.display, .hero-title, .section-title { animation: hue-pan 16s ease-in-out infinite !important; filter: drop-shadow(0 4px 20px rgba(233,199,125,.18)) !important; }
+.btn-gold, .loc-locate { animation: none !important; background-position: 0% 50%; transition: background-position .6s var(--ease), box-shadow .25s, transform .2s var(--ease) !important; }
+.btn-gold:hover, .loc-locate:hover { background-position: 100% 50%; }
+
+/* 5. One twinkle layer is enough; the other two layers were animating huge textures for no visible gain. */
+/* stars keep twinkling; opacity-only animations run on the compositor (no repaint) */
+.stars-1 { will-change: opacity; } .stars-2 { animation: twinkle 7s ease-in-out infinite reverse !important; will-change: opacity; }
+.nebula { animation-duration: 120s; }
+
+/* 6. Faster, lighter scroll-in for sections (opacity/transform only). */
+.an-sec { contain: layout paint; }
+
+
+/* Touch: remove 300ms tap delay & make taps feel instant */
+a, button, [role="tab"], .nav-item { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+
+/* Sections render normally (content-visibility made the page re-render chunks mid-scroll → hitches). */
+.an-sec { content-visibility: visible !important; contain: none !important; }
+/* Route change: quick opacity fade only, no movement, nothing to wait for. */
+.route-fade { animation: route-in .14s ease-out both; }
+@keyframes route-in { from { opacity: .4; } }
+/* Shadows on large cards are expensive to repaint when they change; keep them static. */
+.an-card, .glass { transition: border-color .2s, box-shadow .2s; }

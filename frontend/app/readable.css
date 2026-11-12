@@ -1,0 +1,27 @@
+/* ───────── Reading comfort for analysis text ───────── */
+.an .rd, .an .rd-more li { font-size: 15px; line-height: 1.75; color: #e6dfcf; letter-spacing: .005em; max-width: 68ch; margin: 8px 0 0; text-wrap: pretty; }
+.an .small .kw, .an .small mark.kw { font-size: inherit; }
+.kw { background: none; color: #f6dc9e; font-weight: 600; padding: 0; }
+.an-card .kw { text-shadow: 0 0 14px rgba(233,199,125,.18); }
+.role-line { margin: 8px 0 0; font-size: 12.5px; font-weight: 600; letter-spacing: .04em; color: #c8b6ff; }
+.rd-more { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 6px; animation: rd-in .22s ease-out both; }
+.rd-more li { position: relative; padding-left: 18px; margin: 0 !important; }
+.rd-more li::before { content: ""; position: absolute; left: 3px; top: .72em; width: 6px; height: 6px; border-radius: 50%; background: linear-gradient(135deg, #e2b866, #9b86ff); }
+.rd-extra { margin-top: 4px; }
+@keyframes rd-in { from { opacity: 0; transform: translateY(-3px); } }
+
+.more-btn { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; padding: 5px 12px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 600; color: #f3e2b5; background: rgba(233,199,125,.08); border: 1px solid rgba(233,199,125,.28); transition: background .15s, border-color .15s; }
+.more-btn:hover { background: rgba(233,199,125,.16); border-color: rgba(233,199,125,.5); }
+.more-btn:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
+.more-btn svg { transition: transform .2s ease; }
+.more-btn.open svg { transform: rotate(180deg); }
+.more-row { display: flex; justify-content: center; margin-top: 6px; }
+.more-row .more-btn { padding: 8px 18px; font-size: 13.5px; }
+.sub-h { margin: 22px 0 10px !important; font: 600 12px/1 var(--sans) !important; letter-spacing: .14em; text-transform: uppercase; color: var(--gold) !important; }
+.sub-h:first-of-type { margin-top: 0 !important; }
+.mantra { font-style: italic; color: #f3e2b5; }
+.an-card { padding: 20px 20px 16px; }
+.an-card-head h3 { font-size: 16.5px; }
+.an .an-lead { font-size: 15px; line-height: 1.65; max-width: 70ch; color: #b9b2cc; }
+@media (max-width: 640px) { .an .rd, .an .rd-more li { font-size: 15.5px; } }

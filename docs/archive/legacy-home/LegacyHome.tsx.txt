@@ -1,0 +1,2118 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import Script from "next/script";
+import Image from "next/image";
+import type { LeafletMouseEvent, Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
+import {
+  Activity, ArrowLeft, ArrowRight, BookOpen,
+  ChartNoAxesCombined, ChevronDown, ChevronRight, CircleHelp,
+  FileText, Flower2, Globe2, Hand, HeartHandshake, History, Key, LayoutDashboard,
+  Locate, LockKeyhole, MapPin, Menu, Moon, Plus, RotateCcw, Save, Search,
+  Settings2, ShieldCheck, Sparkles, Star, Sun, UserRound, UsersRound, X
+} from "lucide-react";
+
+type Profile = { id: string; name: string; birth_date: string; birth_time: string; birthplace: string; latitude: number; longitude: number; timezone: string };
+type Account = { id: string; username: string };
+type SavedChart = { record_id: string; profile_id: string; profile_name: string; created_at: string; calculation: Record<string, unknown> };
+type BirthForm = { name: string; birth_date: string; birth_time: string; birthplace: string; latitude: string; longitude: string; timezone: string; ayanamsa: string; chart_style: string; node_type: string; notes: string };
+const emptyForm: BirthForm = { name: "", birth_date: "", birth_time: "", birthplace: "", latitude: "", longitude: "", timezone: "Asia/Kolkata", ayanamsa: "lahiri", chart_style: "north", node_type: "true", notes: "" };
+const primary = ["Kundli Chart", "Palmistry", "Combined Analysis"];
+const secondary = ["Dashboard", "AI Astrology Assistant", "My Profiles", "Saved Reports", "Knowledge Library", "Settings"];
+const icons: Record<string, typeof LayoutDashboard> = { "Kundli Chart": Star, Palmistry: Hand, "Combined Analysis": HeartHandshake, Dashboard: LayoutDashboard, "AI Astrology Assistant": Sparkles, "My Profiles": UsersRound, "Saved Reports": FileText, "Knowledge Library": BookOpen, Settings: Settings2 };
+const API = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+type NominatimPlace = { lat: string; lon: string; display_name: string };
+let nominatimQueue: Promise<unknown> = Promise.resolve();
+let lastNominatimRequestAt = 0;
+const nominatimCache = new Map<string, unknown>();
+
+function queryNominatim(url: string): Promise<unknown> {
+  const request = async () => {
+    if (nominatimCache.has(url)) return nominatimCache.get(url);
+    const wait = Math.max(0, 1000 - (Date.now() - lastNominatimRequestAt));
+    if (wait) await new Promise((resolve) => setTimeout(resolve, wait));
+    lastNominatimRequestAt = Date.now();
+    const response = await fetch(url, {
+      headers: { "Accept-Language": "en" },
+      referrerPolicy: "strict-origin-when-cross-origin",
+    });
+    if (!response.ok) throw new Error("The public place search is temporarily unavailable.");
+    const result: unknown = await response.json();
+    nominatimCache.set(url, result);
+    return result;
+  };
+  const queued = nominatimQueue.then(request, request);
+  nominatimQueue = queued.then(() => undefined, () => undefined);
+  return queued;
+}
+
+export default function Home() {
+  const [active, setActive] = useState("Dashboard");
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState<BirthForm>(emptyForm);
+  const [advanced, setAdvanced] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [toast, setToast] = useState("");
+  const [error, setError] = useState("");
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+  const [chart, setChart] = useState<Record<string, unknown> | null>(null);
+  const [palmImage, setPalmImage] = useState<string | null>(null);
+  const [palmFile, setPalmFile] = useState<File | null>(null);
+  const [tab, setTab] = useState("Overview");
+  const [search, setSearch] = useState("");
+  const [precision, setPrecision] = useState<"seconds" | "minutes">("seconds");
+  const [chartCount, setChartCount] = useState(0);
+  const [account, setAccount] = useState<Account | null>(null);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"signup" | "signin">("signup");
+  const [afterAuth, setAfterAuth] = useState("Dashboard");
+
+  useEffect(() => { if (!toast) return; const id = setTimeout(() => setToast(""), 3600); return () => clearTimeout(id); }, [toast]);
+  useEffect(() => () => { if (palmImage) URL.revokeObjectURL(palmImage); }, [palmImage]);
+
+  const loadProfiles = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/api/profiles`, { credentials: "include" });
+      if (res.status === 401) { setProfiles([]); setChartCount(0); return; }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || "Could not load saved profiles.");
+      }
+      setProfiles(await res.json());
+      const historyResponse = await fetch(`${API}/api/kundli/history`, { credentials: "include" });
+      if (historyResponse.ok) {
+        const history: SavedChart[] = await historyResponse.json();
+        setChartCount(history.length);
+      } else setChartCount(0);
+      setError("");
+    } catch (err) {
+      setChartCount(0);
+      setError(err instanceof Error ? err.message : "Could not load saved profiles.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const preferences = localStorage.getItem("jyotish-preferences");
+      const value = preferences ? JSON.parse(preferences) : null;
+      if (value?.precision === "minutes" || value?.precision === "seconds") {
+        setPrecision(value.precision);
+      }
+    } catch {
+      // Keep the default precision when stored preferences are unavailable.
+    }
+  }, []);
+
+  const restoreSession = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/api/auth/me`, { credentials: "include" });
+      const data = await res.json();
+      setAccount(data.user || null);
+      await loadProfiles();
+    } catch {
+      setProfiles([]);
+      setChartCount(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadProfiles]);
+
+  useEffect(() => { void restoreSession(); }, [restoreSession]);
+
+  function requestAuth(destination: string, mode: "signup" | "signin" = "signup") {
+    setAfterAuth(destination);
+    setAuthMode(mode);
+    setAuthOpen(true);
+    setMobileOpen(false);
+  }
+
+  function openKundli() {
+    if (!account) {
+      requestAuth("Kundli Chart");
+      return;
+    }
+    setChart(null);
+    setForm(emptyForm);
+    setSelectedProfile(null);
+    setActive("Kundli Chart");
+    setMobileOpen(false);
+  }
+
+  function chooseSection(section: string) {
+    if (section !== "Dashboard" && !account) {
+      requestAuth(section);
+      return;
+    }
+    setActive(section);
+    setMobileOpen(false);
+    setTab("Overview");
+  }
+
+  async function completeAuth(user: Account) {
+    setAccount(user);
+    setAuthOpen(false);
+    setActive(afterAuth);
+    setMobileOpen(false);
+    if (afterAuth === "Kundli Chart") {
+      setChart(null);
+      setForm(emptyForm);
+      setSelectedProfile(null);
+    }
+    await loadProfiles();
+  }
+
+  async function signOut() {
+    try {
+      await fetch(`${API}/api/auth/signout`, { method: "POST", credentials: "include" });
+    } finally {
+      setAccount(null);
+      setProfiles([]);
+      setChartCount(0);
+      setSelectedProfile(null);
+      setChart(null);
+      setActive("Dashboard");
+      setAuthOpen(false);
+      setToast("You’re signed out.");
+    }
+  }
+
+  function update<K extends keyof BirthForm>(key: K, value: BirthForm[K]) {
+    setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  async function submitBirth(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+
+    let latStr = form.latitude.trim();
+    let lonStr = form.longitude.trim();
+    let birthplace = form.birthplace.trim();
+
+    let numLat = Number(latStr);
+    let numLon = Number(lonStr);
+    let hasCoords = latStr !== "" && lonStr !== "" && !isNaN(numLat) && !isNaN(numLon) && numLat >= -90 && numLat <= 90 && numLon >= -180 && numLon <= 180;
+
+    // Flexible input resolution:
+    // If birthplace is provided without coordinates, attempt to geocode
+    if (!hasCoords && birthplace) {
+      try {
+        if (typeof window !== "undefined" && window.google?.maps?.Geocoder) {
+          const geocoder = new window.google.maps.Geocoder();
+          const geocodeRes = await new Promise<{ lat: number; lon: number; formatted: string } | null>((resolve) => {
+            geocoder.geocode({ address: birthplace }, (results, status) => {
+              if (status === "OK" && results?.[0]?.geometry?.location) {
+                resolve({
+                  lat: results[0].geometry.location.lat(),
+                  lon: results[0].geometry.location.lng(),
+                  formatted: results[0].formatted_address || birthplace
+                });
+              } else {
+                resolve(null);
+              }
+            });
+          });
+          if (geocodeRes) {
+            numLat = geocodeRes.lat;
+            numLon = geocodeRes.lon;
+            latStr = String(numLat);
+            lonStr = String(numLon);
+            hasCoords = true;
+            birthplace = geocodeRes.formatted;
+            update("latitude", latStr);
+            update("longitude", lonStr);
+            update("birthplace", birthplace);
+          }
+        }
+        if (!hasCoords) {
+          const data = await queryNominatim(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(birthplace)}&limit=1&addressdetails=1`) as NominatimPlace[];
+          if (data.length > 0) {
+            numLat = Number(data[0].lat);
+            numLon = Number(data[0].lon);
+            latStr = String(numLat);
+            lonStr = String(numLon);
+            hasCoords = true;
+            birthplace = data[0].display_name;
+            update("latitude", latStr);
+            update("longitude", lonStr);
+            update("birthplace", birthplace);
+          }
+        }
+      } catch (err) {
+        console.warn("Geocode on submit failed:", err);
+      }
+    }
+
+    if (!hasCoords && !birthplace) {
+      setError("Please provide a birthplace search, select a point on the map, or enter latitude and longitude.");
+      setBusy(false);
+      return;
+    }
+
+    if (!hasCoords) {
+      setError("Please enter valid numerical latitude (-90 to 90) and longitude (-180 to 180), or select a location on the map / search.");
+      setBusy(false);
+      return;
+    }
+
+    if (!birthplace) {
+      birthplace = `Coordinates (${numLat.toFixed(4)}, ${numLon.toFixed(4)})`;
+      update("birthplace", birthplace);
+    }
+
+    const payload = {
+      name: form.name,
+      profile_id: selectedProfile?.id || null,
+      birth_date: form.birth_date,
+      birth_time: form.birth_time,
+      birthplace: birthplace,
+      latitude: numLat,
+      longitude: numLon,
+      timezone: form.timezone,
+      ayanamsa: form.ayanamsa,
+      chart_style: form.chart_style,
+      node_type: form.node_type,
+      description: form.notes
+    };
+
+    try {
+      const res = await fetch(`${API}/api/kundli/calculate`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.detail || "Calculation could not be completed.");
+      setChart(body);
+      if (body.profile) setSelectedProfile(body.profile);
+      await loadProfiles();
+      setToast("Kundli calculated and saved with exact coordinates.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "The calculation service is unavailable.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function addProfile(profile: Profile) {
+    setSelectedProfile(profile);
+    setForm({
+      ...emptyForm,
+      name: profile.name,
+      birth_date: profile.birth_date,
+      birth_time: profile.birth_time,
+      birthplace: profile.birthplace,
+      latitude: String(profile.latitude),
+      longitude: String(profile.longitude),
+      timezone: profile.timezone
+    });
+    setChart(null);
+    setActive("Kundli Chart");
+    setToast(`Selected ${profile.name}.`);
+  }
+
+  async function removeProfile(profile: Profile) {
+    if (!window.confirm(`Delete ${profile.name} and its saved analyses?`)) return;
+    try {
+      const res = await fetch(`${API}/api/profiles/${encodeURIComponent(profile.id)}`, { method: "DELETE", credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Could not delete profile.");
+      setProfiles((items) => items.filter((item) => item.id !== profile.id));
+      if (selectedProfile?.id === profile.id) setSelectedProfile(null);
+      setToast("Profile and its saved analyses deleted.");
+    } catch (e) {
+      setToast(e instanceof Error ? e.message : "Profile could not be deleted.");
+    }
+  }
+
+  function onImage(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+      setToast("Choose a JPG, PNG, or WebP image for your palm photograph.");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      setToast("Choose a photograph smaller than 15 MB.");
+      e.target.value = "";
+      return;
+    }
+    setPalmFile(file);
+    setPalmImage(URL.createObjectURL(file));
+  }
+
+  const filteredProfiles = useMemo(() => profiles.filter((p) => p.name.toLowerCase().includes(search.toLowerCase())), [profiles, search]);
+
+  const navButton = (item: string, primaryItem = false) => {
+    const Icon = icons[item] || Star;
+    return (
+      <button key={item} className={`nav-btn ${primaryItem ? "primary" : ""} ${active === item ? "active" : ""}`} onClick={() => chooseSection(item)}>
+        <Icon size={15} strokeWidth={1.7} />
+        {item}
+      </button>
+    );
+  };
+
+  const sidebar = (
+    <aside className="sidebar">
+      <div className="brand">
+        <div className="brand-mark">✳</div>
+        <div>
+          <strong>Jyotish Studio</strong>
+          <small>Clarity in the cosmos</small>
+        </div>
+      </div>
+      <p className="nav-label">Explore</p>
+      <nav className="nav-group">{primary.map((n) => navButton(n, true))}</nav>
+      <div className="nav-divider" />
+      <p className="nav-label">Workspace</p>
+      <nav className="nav-group">{secondary.map((item) => navButton(item))}</nav>
+      <div className="side-bottom">
+        <button className="profile-switch" onClick={() => chooseSection("My Profiles")}>
+          <span className="avatar">{selectedProfile?.name?.[0] || account?.username?.[0] || "J"}</span>
+          <span style={{ flex: 1 }}>
+            <b>{selectedProfile?.name || account?.username || "Guest workspace"}</b>
+            <small>{selectedProfile ? "Selected profile" : `${profiles.length} saved profiles`}</small>
+          </span>
+          <ChevronDown size={13} />
+        </button>
+        <div style={{ color: "#696b60", fontSize: 9, padding: "0 12px" }}>A contemplative space for ancient wisdom</div>
+      </div>
+    </aside>
+  );
+
+  if (authOpen) {
+    return <AuthScreen mode={authMode} setMode={setAuthMode} destination={afterAuth} onComplete={completeAuth} onBack={() => setAuthOpen(false)} />;
+  }
+
+  return (
+    <div className="shell">
+      {sidebar}
+      {mobileOpen && (
+        <div className="mobile-shade" style={{ position: "fixed", inset: 0, background: "#0009", zIndex: 30 }} onClick={() => setMobileOpen(false)}>
+          {sidebar}
+        </div>
+      )}
+      <main className="main">
+        <header className="topbar">
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <button className="icon-btn mobile-menu" onClick={() => setMobileOpen(true)} aria-label="Open navigation">
+              <Menu size={16} />
+            </button>
+            <div className="breadcrumbs">
+              Workspace <ChevronRight size={11} style={{ verticalAlign: "middle", margin: "0 5px" }} />
+              <span>{active}</span>
+            </div>
+          </div>
+          <div className="top-actions">
+            {account ? (
+              <>
+                <span className="account-label">{account.username}</span>
+                <button className="button auth-entry" onClick={signOut}>Sign out</button>
+              </>
+            ) : (
+              <>
+                <button className="button auth-entry" onClick={() => requestAuth("Dashboard", "signin")}>
+                  <UserRound size={13} /> Sign in
+                </button>
+                <button className="button auth-entry" onClick={() => requestAuth("Dashboard", "signup")}>
+                  Create account
+                </button>
+              </>
+            )}
+            <button className="icon-btn" aria-label="Search" onClick={() => chooseSection("My Profiles")}>
+              <Search size={14} />
+            </button>
+            <button className="icon-btn" aria-label="Help" onClick={() => setToast("Birth calculations use exact coordinates, selected sidereal settings, and historical time zones.")}>
+              <CircleHelp size={14} />
+            </button>
+            <button className="button gold" onClick={openKundli}>
+              <Plus size={13} /> New Kundli
+            </button>
+          </div>
+        </header>
+
+        <div className="content">
+          {active === "Dashboard" && <Dashboard profiles={profiles} chartCount={chartCount} loading={loading} onKundli={openKundli} onNavigate={chooseSection} onProfile={addProfile} error={error} />}
+          {active === "Kundli Chart" && (
+            <Kundli
+              form={form}
+              update={update}
+              advanced={advanced}
+              setAdvanced={setAdvanced}
+              submit={submitBirth}
+              busy={busy}
+              error={error}
+              chart={chart}
+              precision={precision}
+              profiles={profiles}
+              selectedProfile={selectedProfile}
+              onProfile={addProfile}
+            />
+          )}
+          {active === "Palmistry" && <Palmistry image={palmImage} file={palmFile} onImage={onImage} setImage={setPalmImage} toast={setToast} />}
+          {active === "Combined Analysis" && <Combined profiles={profiles} onNavigate={chooseSection} />}
+          {active === "My Profiles" && <Profiles profiles={filteredProfiles} loading={loading} search={search} setSearch={setSearch} onProfile={addProfile} onNew={openKundli} onDelete={removeProfile} error={error} />}
+          {active === "Saved Reports" && <Reports onOpenChart={(report) => {
+            const profile = profiles.find((item) => item.id === report.profile_id) || null;
+            setSelectedProfile(profile);
+            if (profile) {
+              setForm({
+                ...emptyForm,
+                name: profile.name,
+                birth_date: profile.birth_date,
+                birth_time: profile.birth_time,
+                birthplace: profile.birthplace,
+                latitude: String(profile.latitude),
+                longitude: String(profile.longitude),
+                timezone: profile.timezone,
+                ayanamsa: String((report.calculation.settings as { ayanamsa?: string } | undefined)?.ayanamsa || "lahiri"),
+                chart_style: String((report.calculation.settings as { chart_style?: string } | undefined)?.chart_style || "north"),
+                node_type: String((report.calculation.settings as { node_type?: string } | undefined)?.node_type || "true"),
+              });
+            }
+            setChart({ ...report.calculation, record_id: report.record_id });
+            setActive("Kundli Chart");
+          }} />}
+          {active === "Knowledge Library" && <Knowledge tab={tab} setTab={setTab} />}
+          {active === "AI Astrology Assistant" && (
+            <Assistant
+              profile={selectedProfile}
+              profiles={profiles}
+              onSelectProfile={setSelectedProfile}
+            />
+          )}
+          {active === "Settings" && <Settings precision={precision} setPrecision={setPrecision} />}
+        </div>
+        {toast && <div className="toast">{toast}</div>}
+      </main>
+    </div>
+  );
+}
+
+function Dashboard({ profiles, chartCount, loading, onKundli, onNavigate, onProfile, error }: { profiles: Profile[]; chartCount: number; loading: boolean; onKundli: () => void; onNavigate: (s: string) => void; onProfile: (p: Profile) => void; error: string }) {
+  return (
+    <>
+      <div className="welcome-row">
+        <div>
+          <p className="eyebrow">Your personal observatory</p>
+          <h1 className="heading">A clearer view of your sky.</h1>
+          <p className="subheading">Explore the living traditions of Jyotish and Hasta Samudrika, grounded in your own details.</p>
+          <div className="actions">
+            <button className="button gold" onClick={onKundli}>
+              <Plus size={14} /> Create a Kundli
+            </button>
+            <button className="button" onClick={() => onNavigate("Palmistry")}>
+              <Hand size={14} /> Start palm reading
+            </button>
+          </div>
+        </div>
+        <div className="date-note">शुभ दिन · A space for reflection</div>
+      </div>
+      <div className="grid stats">
+        <Stat icon={UsersRound} label="Saved profiles" value={String(profiles.length).padStart(2, "0")} hint="your circle" />
+        <Stat icon={ChartNoAxesCombined} label="Kundli charts" value={String(chartCount).padStart(2, "0")} hint="saved calculations" />
+        <Stat icon={FileText} label="Saved reports" value={String(chartCount).padStart(2, "0")} hint="chart history" />
+      </div>
+      <div className="section-head">
+        <h2>Begin an exploration</h2>
+        <span className="date-note">Three paths, one thoughtful workspace</span>
+      </div>
+      <div className="grid module-grid">
+        <Module icon={Star} title="Kundli Chart" desc="Create a birth chart with live location search, interactive map, and sidereal settings." onClick={onKundli} />
+        <Module icon={Hand} title="Palmistry" desc="Prepare palm photographs and review visual observations with care." onClick={() => onNavigate("Palmistry")} />
+        <Module icon={HeartHandshake} title="Combined Analysis" desc="Bring saved chart and palm observations together when both are available." onClick={() => onNavigate("Combined Analysis")} />
+      </div>
+      <div className="grid lower-grid">
+        <div className="card">
+          <h2 className="card-title">Your profiles</h2>
+          <p className="card-desc">Birth details kept separately for each person.</p>
+          {loading ? (
+            <div className="empty-state">Loading profiles…</div>
+          ) : profiles.length ? (
+            profiles.slice(0, 3).map((p) => (
+              <button className="list-row" style={{ width: "100%", textAlign: "left", cursor: "pointer" }} key={p.id} onClick={() => onProfile(p)}>
+                <span>
+                  <b>{p.name}</b>
+                  <small>{p.birthplace} · {p.birth_date}</small>
+                </span>
+                <ChevronRight size={14} color="#8b7c57" />
+              </button>
+            ))
+          ) : (
+            <div className="empty-state">
+              <div className="empty-icon"><UsersRound size={19} /></div>
+              <strong>Your profiles will appear here</strong>
+              <span>Create a Kundli to save the first birth profile.</span>
+            </div>
+          )}
+        </div>
+        <div className="card">
+          <h2 className="card-title">Recent activity</h2>
+          <p className="card-desc">A quiet record of your explorations.</p>
+          <div className="empty-state">
+            <div className="empty-icon"><History size={19} /></div>
+            <strong>No activity yet</strong>
+            <span>Your saved work will be easy to find here.</span>
+          </div>
+        </div>
+      </div>
+      {error && <div className="notice"><strong>Storage connection:</strong> {error}</div>}
+      <div className="notice">
+        <strong>A note on interpretation.</strong> Astrology and palmistry are traditional interpretive practices. Readings here support reflection and should not be treated as scientific or medical certainty.
+      </div>
+    </>
+  );
+}
+
+function AuthScreen({ mode, setMode, destination, onComplete, onBack }: { mode: "signup" | "signin"; setMode: (m: "signup" | "signin") => void; destination: string; onComplete: (u: Account) => void; onBack: () => void }) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [visible, setVisible] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const signup = mode === "signup";
+
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError("");
+    if (signup && password !== confirmPassword) {
+      setError("Those passwords don’t match.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const response = await fetch(`${API}/api/auth/${signup ? "signup" : "signin"}`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
+      });
+      const body = await response.json();
+      if (!response.ok) {
+        const detail = body.detail;
+        throw new Error(typeof detail === "string" ? detail : "Please check your username and password.");
+      }
+      onComplete(body.user);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "The account service is unavailable. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <main className="auth-screen">
+      <div className="auth-nav">
+        <button className="brand auth-brand" onClick={onBack}>
+          <span className="brand-mark">✳</span>
+          <span>
+            <strong>Jyotish Studio</strong>
+            <small>Clarity in the cosmos</small>
+          </span>
+        </button>
+        <button className="auth-back" onClick={onBack}>
+          <ArrowLeft size={14} /> Back to dashboard
+        </button>
+      </div>
+      <div className="auth-layout">
+        <section className="auth-story">
+          <p className="eyebrow">A personal observatory</p>
+          <h1 className="auth-display">Your sky.<br /><em>Your space.</em></h1>
+          <p className="auth-story-copy">Create a private workspace for your charts, observations, and saved explorations.</p>
+          <div className="auth-orbit">
+            <div className="orbit-ring orbit-one" />
+            <div className="orbit-ring orbit-two" />
+            <div className="orbit-core"><Flower2 size={24} /></div>
+            <span className="orbit-star star-a">✦</span>
+            <span className="orbit-star star-b">✧</span>
+          </div>
+          <div className="auth-trust">
+            <span><ShieldCheck size={14} /></span>
+            <p>
+              <b>Your password stays private</b>
+              <small>Only a one-way Argon2 hash is stored. No email is requested.</small>
+            </p>
+          </div>
+        </section>
+        <section className="auth-card">
+          <div className="auth-card-top">
+            <span className="eyebrow">{signup ? "Start your workspace" : "Your workspace awaits"}</span>
+            <span className="auth-step"><Moon size={13} /> {destination}</span>
+          </div>
+          <h2>{signup ? "Create your account" : "Welcome back"}</h2>
+          <p className="auth-subtitle">{signup ? "A username and password are all you need." : "Sign in with your username and password."}</p>
+          <form onSubmit={submit} className="auth-form">
+            <label className="auth-label" htmlFor="auth-username">Username</label>
+            <div className="auth-input-wrap">
+              <UserRound size={15} />
+              <input
+                id="auth-username"
+                name="username"
+                type="text"
+                autoComplete="username"
+                required
+                minLength={3}
+                maxLength={32}
+                pattern="[A-Za-z0-9_.-]{3,32}"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="e.g. stargazer27"
+              />
+            </div>
+            <span className="auth-hint">3–32 characters: letters, numbers, dot, dash, underscore.</span>
+            <label className="auth-label" htmlFor="auth-password">Password</label>
+            <div className="auth-input-wrap">
+              <LockKeyhole size={15} />
+              <input
+                id="auth-password"
+                name="password"
+                type={visible ? "text" : "password"}
+                autoComplete={signup ? "new-password" : "current-password"}
+                required
+                minLength={10}
+                maxLength={128}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={signup ? "At least 10 characters" : "Your password"}
+              />
+              <button className="show-password" type="button" aria-label={visible ? "Hide password" : "Show password"} onClick={() => setVisible(!visible)}>
+                {visible ? "Hide" : "Show"}
+              </button>
+            </div>
+            {signup && (
+              <>
+                <label className="auth-label" htmlFor="auth-confirm-password">Confirm password</label>
+                <div className="auth-input-wrap">
+                  <LockKeyhole size={15} />
+                  <input
+                    id="auth-confirm-password"
+                    type={visible ? "text" : "password"}
+                    autoComplete="new-password"
+                    required
+                    minLength={10}
+                    maxLength={128}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Enter it once more"
+                  />
+                </div>
+              </>
+            )}
+            {error && <div className="auth-error" role="alert">{error}</div>}
+            <button className="button gold auth-submit" disabled={busy}>
+              {busy ? "Please wait…" : signup ? "Create account" : "Sign in"}
+              <ArrowRight size={14} />
+            </button>
+          </form>
+          <p className="auth-switch">
+            {signup ? "Already have an account?" : "New to Jyotish Studio?"}
+            <button onClick={() => { setError(""); setMode(signup ? "signin" : "signup"); }}>
+              {signup ? "Sign in" : "Create an account"}
+            </button>
+          </p>
+          <div className="auth-footnote" style={{ marginTop: 14 }}>
+            <ShieldCheck size={13} />
+            <span>No email or phone number is collected. Username-only accounts cannot be recovered if you forget the password.</span>
+          </div>
+        </section>
+      </div>
+      <footer className="auth-footer">A reflective space for traditional Jyotish and Hasta Samudrika</footer>
+    </main>
+  );
+}
+
+function Stat({ icon: Icon, label, value, hint }: { icon: typeof Star; label: string; value: string; hint: string }) {
+  return (
+    <div className="stat-card">
+      <div className="stat-top">
+        <span>{label}</span>
+        <Icon size={14} className="stat-icon" />
+      </div>
+      <div className="stat-value">
+        {value}
+        <span className="stat-hint">{hint}</span>
+      </div>
+    </div>
+  );
+}
+
+function Module({ icon: Icon, title, desc, onClick }: { icon: typeof Star; title: string; desc: string; onClick: () => void }) {
+  return (
+    <button className="card module-card" onClick={onClick}>
+      <span className="module-arrow"><ArrowRight size={14} /></span>
+      <span className="module-icon"><Icon size={16} /></span>
+      <h3>{title}</h3>
+      <p>{desc}</p>
+    </button>
+  );
+}
+
+function Kundli({
+  form,
+  update,
+  advanced,
+  setAdvanced,
+  submit,
+  busy,
+  error,
+  chart,
+  precision,
+  profiles,
+  selectedProfile,
+  onProfile
+}: {
+  form: BirthForm;
+  update: <K extends keyof BirthForm>(k: K, v: BirthForm[K]) => void;
+  advanced: boolean;
+  setAdvanced: (v: boolean) => void;
+  submit: (e: FormEvent<HTMLFormElement>) => void;
+  busy: boolean;
+  error: string;
+  chart: Record<string, unknown> | null;
+  precision: "seconds" | "minutes";
+  profiles: Profile[];
+  selectedProfile: Profile | null;
+  onProfile: (p: Profile) => void;
+}) {
+  const result = chart as {
+    planets?: { name: string; sign: string; longitude: number; house?: number; retrograde: boolean }[];
+    ascendant?: { sign: string; longitude: number; absolute_longitude?: number };
+    birth?: { latitude: number; longitude: number; timezone: string };
+    settings?: { ayanamsa: string; chart_style: string };
+    engine?: string;
+  } | null;
+
+  return (
+    <>
+      <div className="page-header">
+        <p className="eyebrow">Primary module · Jyotish</p>
+        <h1 className="heading">Kundli Chart</h1>
+        <p className="subheading">
+          Accurate sidereal placements calculated with Swiss Ephemeris. Provide your location via Google Places, OpenStreetMap, or manual coordinates.
+        </p>
+      </div>
+
+      {profiles.length > 0 && (
+        <div className="card" style={{ padding: "12px 15px", marginBottom: 14, display: "flex", alignItems: "center", gap: 10 }}>
+          <UserRound size={14} color="#bca36c" />
+          <span style={{ color: "#a6a494", fontSize: 10 }}>Profile</span>
+          <select
+            aria-label="Select profile"
+            value={selectedProfile?.id || ""}
+            onChange={(e) => {
+              const p = profiles.find((x) => x.id === e.target.value);
+              if (p) onProfile(p);
+            }}
+            style={{ background: "transparent", border: 0, color: "#e5e0d4", outline: 0, fontSize: 11 }}
+          >
+            <option value="">New birth details</option>
+            {profiles.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} · {p.birthplace}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <div className="workspace">
+        <form className="card form-card" onSubmit={submit}>
+          <div className="section-head" style={{ margin: "0 0 17px" }}>
+            <h2 className="card-title">Birth information</h2>
+            <span className="badge">Required details</span>
+          </div>
+
+          <div className="field-grid">
+            <Field label="Name" required>
+              <input
+                required
+                maxLength={100}
+                value={form.name}
+                onChange={(e) => update("name", e.target.value)}
+                placeholder="Name for this profile"
+              />
+            </Field>
+
+            <Field label="Birth date" required>
+              <input
+                required
+                type="date"
+                value={form.birth_date}
+                onChange={(e) => update("birth_date", e.target.value)}
+              />
+            </Field>
+
+            <Field label="Local birth time" required>
+              <input
+                required
+                type="time"
+                step={precision === "seconds" ? 1 : 60}
+                value={form.birth_time}
+                onChange={(e) => update("birth_time", e.target.value)}
+              />
+              <span className="field-help">Local civil time at the birthplace.</span>
+            </Field>
+
+            <Field label="IANA time zone" required>
+              <input
+                required
+                value={form.timezone}
+                onChange={(e) => update("timezone", e.target.value)}
+                placeholder="Asia/Kolkata"
+              />
+              <span className="field-help">Daylight-saving rules are applied automatically.</span>
+            </Field>
+
+            {/* Flexible Location Section: Full Width */}
+            <div className="field full">
+              <label>Birthplace & Location Search</label>
+              <LocationPicker
+                value={form.birthplace}
+                latitude={form.latitude}
+                longitude={form.longitude}
+                onName={(name) => update("birthplace", name)}
+                onCoords={(lat, lon) => {
+                  update("latitude", lat);
+                  update("longitude", lon);
+                }}
+                onLocation={(name, lat, lon) => {
+                  update("birthplace", name);
+                  update("latitude", typeof lat === "number" ? lat.toFixed(6) : String(lat));
+                  update("longitude", typeof lon === "number" ? lon.toFixed(6) : String(lon));
+                }}
+              />
+            </div>
+
+            {/* Geographical Coordinate Inputs */}
+            <Field label="Latitude (decimal degrees)">
+              <input
+                type="number"
+                min="-90"
+                max="90"
+                step="any"
+                value={form.latitude}
+                onChange={(e) => update("latitude", e.target.value)}
+                placeholder="e.g. 19.076000"
+              />
+              <span className="field-help">Autofilled from search/map, or enter manually (-90 to 90).</span>
+            </Field>
+
+            <Field label="Longitude (decimal degrees)">
+              <input
+                type="number"
+                min="-180"
+                max="180"
+                step="any"
+                value={form.longitude}
+                onChange={(e) => update("longitude", e.target.value)}
+                placeholder="e.g. 72.877700"
+              />
+              <span className="field-help">Autofilled from search/map, or enter manually (-180 to 180).</span>
+            </Field>
+
+            <div className="field full">
+              <label>Profile note</label>
+              <input
+                value={form.notes}
+                onChange={(e) => update("notes", e.target.value)}
+                placeholder="Optional context or notes"
+                maxLength={1000}
+              />
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="advanced-toggle"
+            onClick={() => setAdvanced(!advanced)}
+          >
+            <span>
+              <Settings2 size={14} style={{ verticalAlign: "middle", marginRight: 8 }} />
+              Calculation settings
+            </span>
+            {advanced ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </button>
+
+          {advanced && (
+            <div className="advanced-body">
+              <Field label="Ayanamsa">
+                <select value={form.ayanamsa} onChange={(e) => update("ayanamsa", e.target.value)}>
+                  <option value="lahiri">Lahiri / Chitrapaksha</option>
+                  <option value="raman">Raman</option>
+                  <option value="kp">KP</option>
+                </select>
+              </Field>
+              <Field label="Chart style">
+                <select value={form.chart_style} onChange={(e) => update("chart_style", e.target.value)}>
+                  <option value="north">North Indian</option>
+                  <option value="south">South Indian</option>
+                  <option value="east">East Indian</option>
+                </select>
+              </Field>
+              <Field label="Lunar node">
+                <select value={form.node_type} onChange={(e) => update("node_type", e.target.value)}>
+                  <option value="true">True node</option>
+                  <option value="mean">Mean node</option>
+                </select>
+              </Field>
+              <div className="notice-inline">
+                Settings are recorded with this chart. Unsupported methods are not silently substituted.
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="notice" style={{ marginBottom: 13, color: "#d4a29a", borderColor: "#674139" }}>
+              {error}
+            </div>
+          )}
+
+          <button className="button gold full-width" disabled={busy}>
+            {busy ? (
+              <>
+                <Activity size={13} /> Calculating…
+              </>
+            ) : (
+              <>
+                <Sparkles size={13} /> Calculate birth chart
+              </>
+            )}
+          </button>
+        </form>
+
+        <div className="card form-card">
+          <div className="section-head" style={{ margin: "0 0 10px" }}>
+            <h2 className="card-title">Your chart</h2>
+            {chart && <span className="badge">Calculated</span>}
+          </div>
+
+          {result ? (
+            <ChartResult result={result} />
+          ) : (
+            <div className="chart-empty">
+              <div>
+                <div className="empty-icon">
+                  <Sun size={23} />
+                </div>
+                <h3>Your chart begins here</h3>
+                <p>
+                  Enter birth details, time zone, and coordinates using live place search, the interactive map, or manual input.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="notice-inline" style={{ marginTop: 13 }}>
+            <ShieldCheck size={13} style={{ verticalAlign: "middle", marginRight: 6, color: "#b2b697" }} />
+            Calculation settings and geographical coordinates remain attached to this profile.
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function ChartResult({
+  result
+}: {
+  result: {
+    planets?: { name: string; sign: string; longitude: number; house?: number; retrograde: boolean }[];
+    ascendant?: { sign: string; longitude: number };
+    birth?: { latitude: number; longitude: number; timezone: string };
+    settings?: { ayanamsa: string; chart_style: string };
+    engine?: string;
+  };
+}) {
+  return (
+    <>
+      <div className="notice-inline" style={{ marginBottom: 10 }}>
+        Ascendant: <b style={{ color: "#e6d6ae" }}>{result.ascendant?.sign || "—"}</b> · {Number(result.ascendant?.longitude || 0).toFixed(2)}° · {result.settings?.ayanamsa}
+        {result.birth && (
+          <span style={{ display: "block", marginTop: 4, color: "#8a897e", fontSize: 9 }}>
+            📍 Exact Coordinates: {result.birth.latitude?.toFixed(4)}°, {result.birth.longitude?.toFixed(4)}° · {result.birth.timezone} ({result.engine || "Swiss Ephemeris"})
+          </span>
+        )}
+      </div>
+      <div className="tabs">
+        <button className="tab active">D1 · Rashi</button>
+        <button className="tab" title="Divisional chart calculation is not enabled yet">Varga charts · unavailable</button>
+      </div>
+      {result.planets?.map((p) => (
+        <div className="list-row" key={p.name}>
+          <span>
+            <b>{p.name}{p.retrograde ? " ℞" : ""}</b>
+            <small>{p.sign} · house {p.house ?? "—"}</small>
+          </span>
+          <span className="badge">{p.longitude.toFixed(2)}°</span>
+        </div>
+      ))}
+    </>
+  );
+}
+
+function LocationPicker({
+  value,
+  latitude,
+  longitude,
+  onLocation,
+  onName,
+  onCoords
+}: {
+  value: string;
+  latitude: string;
+  longitude: string;
+  onLocation: (name: string, lat: number, lon: number) => void;
+  onName: (name: string) => void;
+  onCoords: (lat: string, lon: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const leafletMapRef = useRef<LeafletMap | null>(null);
+  const leafletMarkerRef = useRef<LeafletMarker | null>(null);
+
+  // Google Maps refs
+  const gmapRef = useRef<HTMLDivElement>(null);
+  const gmapObj = useRef<google.maps.Map | null>(null);
+  const gmarkerRef = useRef<google.maps.Marker | null>(null);
+  const gautocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const ggeocoderRef = useRef<google.maps.Geocoder | null>(null);
+
+  const [engine, setEngine] = useState<"osm" | "google">("osm");
+  const [mapKey, setMapKey] = useState("");
+  const [customKeyInput, setCustomKeyInput] = useState("");
+  const [showKeyConfig, setShowKeyConfig] = useState(false);
+  const [googleReady, setGoogleReady] = useState(false);
+  const [mapError, setMapError] = useState("");
+  const [locating, setLocating] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
+  const latestProps = useRef({ value, latitude, longitude, onLocation, onName, onCoords });
+  latestProps.current = { value, latitude, longitude, onLocation, onName, onCoords };
+  const reverseOsmRef = useRef<(lat: number, lon: number) => Promise<void>>(async () => {});
+  const reverseGoogleRef = useRef<(lat: number, lon: number) => void>(() => {});
+  const locationInputVersion = useRef(0);
+
+  function coordinatesStillMatch(lat: number, lon: number) {
+    return latestProps.current.latitude === lat.toFixed(6)
+      && latestProps.current.longitude === lon.toFixed(6);
+  }
+
+  // Initialize key from environment or localStorage
+  useEffect(() => {
+    const envKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY || "";
+    let storedKey = "";
+    try {
+      storedKey = localStorage.getItem("jyotish_gmaps_browser_key") || "";
+    } catch {}
+    const active = storedKey.trim() || envKey.trim();
+    setMapKey(active);
+    setCustomKeyInput(storedKey.trim());
+    if (active) {
+      setEngine("google");
+    } else {
+      setEngine("osm");
+    }
+  }, []);
+
+  // Catch Google Maps authentication failures
+  useEffect(() => {
+    window.gm_authFailure = () => {
+      setMapError("Google Maps key was rejected. Switched to OpenStreetMap.");
+      setEngine("osm");
+    };
+  }, []);
+
+  // Check if google maps is loaded on window
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.google?.maps?.places) {
+      setGoogleReady(true);
+    }
+  }, [mapKey]);
+
+  // Reverse lookups use a shared queue/cache and are paced for the public API.
+  async function reverseGeocodeOsm(lat: number, lon: number) {
+    setGeocoding(true);
+    try {
+      const data = await queryNominatim(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14&addressdetails=1`) as { display_name?: string };
+      if (data.display_name && coordinatesStillMatch(lat, lon)) {
+        latestProps.current.onName(data.display_name);
+      }
+    } catch {
+      // quiet fallback
+    } finally {
+      setGeocoding(false);
+    }
+  }
+
+  // Reverse geocoding helper (Google)
+  function reverseGeocodeGoogle(lat: number, lon: number) {
+    if (!window.google?.maps) return;
+    if (!ggeocoderRef.current) {
+      ggeocoderRef.current = new window.google.maps.Geocoder();
+    }
+    setGeocoding(true);
+    ggeocoderRef.current.geocode({ location: { lat, lng: lon } }, (results, status) => {
+      setGeocoding(false);
+      if (status === "OK" && results?.[0]?.formatted_address && coordinatesStillMatch(lat, lon)) {
+        latestProps.current.onName(results[0].formatted_address);
+      }
+    });
+  }
+
+  reverseOsmRef.current = reverseGeocodeOsm;
+  reverseGoogleRef.current = reverseGeocodeGoogle;
+
+  // Initialize Built-in Leaflet Map (Zero-Key Mode)
+  useEffect(() => {
+    if (engine !== "osm") return;
+    let isMounted = true;
+
+    async function initLeaflet() {
+      if (typeof window === "undefined" || !mapContainerRef.current) return;
+      if (leafletMapRef.current) return;
+
+      try {
+        const L = (await import("leaflet")).default;
+        if (!isMounted || !mapContainerRef.current) return;
+
+        const { latitude: currentLatitude, longitude: currentLongitude } = latestProps.current;
+        const numLat = Number(currentLatitude);
+        const numLon = Number(currentLongitude);
+        const hasInitial = !isNaN(numLat) && !isNaN(numLon) && currentLatitude !== "" && currentLongitude !== "" && numLat >= -90 && numLat <= 90 && numLon >= -180 && numLon <= 180;
+        const initialLat = hasInitial ? numLat : 20.5937;
+        const initialLon = hasInitial ? numLon : 78.9629;
+
+        const map = L.map(mapContainerRef.current, {
+          center: [initialLat, initialLon],
+          zoom: hasInitial ? 10 : 3,
+          zoomControl: false,
+          attributionControl: true,
+        });
+
+        // Dark celestial tile layer
+        L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+          subdomains: "abcd",
+          maxZoom: 19,
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        }).addTo(map);
+
+        L.control.zoom({ position: "bottomright" }).addTo(map);
+
+        const goldIcon = L.divIcon({
+          className: "custom-map-pin",
+          html: `<div style="transform: translate(-50%, -100%);">
+            <svg width="28" height="36" viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M14 0C6.268 0 0 6.268 0 14C0 24.5 14 36 14 36C14 36 28 24.5 28 14C28 6.268 21.732 0 14 0Z" fill="#c8aa6c" stroke="#12130f" stroke-width="1.5"/>
+              <circle cx="14" cy="14" r="5" fill="#12130f"/>
+              <circle cx="14" cy="14" r="2.5" fill="#f4f0e7"/>
+            </svg>
+          </div>`,
+          iconSize: [28, 36],
+          iconAnchor: [14, 36]
+        });
+
+        if (hasInitial) {
+          const marker = L.marker([initialLat, initialLon], {
+            icon: goldIcon,
+            draggable: true
+          }).addTo(map);
+
+          marker.on("dragend", () => {
+            const pos = marker.getLatLng();
+            latestProps.current.onCoords(pos.lat.toFixed(6), pos.lng.toFixed(6));
+            void reverseOsmRef.current(pos.lat, pos.lng);
+          });
+          leafletMarkerRef.current = marker;
+        }
+
+        map.on("click", (e: LeafletMouseEvent) => {
+          const { lat, lng } = e.latlng;
+          latestProps.current.onCoords(lat.toFixed(6), lng.toFixed(6));
+
+          if (leafletMarkerRef.current) {
+            leafletMarkerRef.current.setLatLng([lat, lng]);
+          } else {
+            const marker = L.marker([lat, lng], {
+              icon: goldIcon,
+              draggable: true
+            }).addTo(map);
+
+            marker.on("dragend", () => {
+              const pos = marker.getLatLng();
+              latestProps.current.onCoords(pos.lat.toFixed(6), pos.lng.toFixed(6));
+              void reverseOsmRef.current(pos.lat, pos.lng);
+            });
+            leafletMarkerRef.current = marker;
+          }
+          void reverseOsmRef.current(lat, lng);
+        });
+
+        leafletMapRef.current = map;
+      } catch (err) {
+        console.warn("Leaflet map init error:", err);
+      }
+    }
+
+    initLeaflet();
+    return () => {
+      isMounted = false;
+      if (leafletMapRef.current) {
+        leafletMapRef.current.remove();
+        leafletMapRef.current = null;
+        leafletMarkerRef.current = null;
+      }
+    };
+  }, [engine]);
+
+  // Synchronize Leaflet map & marker when manual coordinates change
+  useEffect(() => {
+    const map = leafletMapRef.current;
+    if (engine !== "osm" || !map) return;
+    const lat = Number(latitude);
+    const lon = Number(longitude);
+    if (isNaN(lat) || isNaN(lon) || latitude === "" || longitude === "") return;
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return;
+
+    import("leaflet").then((leafletModule) => {
+      if (leafletMapRef.current !== map) return;
+      const L = leafletModule.default;
+      const goldIcon = L.divIcon({
+        className: "custom-map-pin",
+        html: `<div style="transform: translate(-50%, -100%);">
+          <svg width="28" height="36" viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M14 0C6.268 0 0 6.268 0 14C0 24.5 14 36 14 36C14 36 28 24.5 28 14C28 6.268 21.732 0 14 0Z" fill="#c8aa6c" stroke="#12130f" stroke-width="1.5"/>
+            <circle cx="14" cy="14" r="5" fill="#12130f"/>
+            <circle cx="14" cy="14" r="2.5" fill="#f4f0e7"/>
+          </svg>
+        </div>`,
+        iconSize: [28, 36],
+        iconAnchor: [14, 36]
+      });
+
+      if (leafletMarkerRef.current) {
+        const cur = leafletMarkerRef.current.getLatLng();
+        if (Math.abs(cur.lat - lat) > 0.0001 || Math.abs(cur.lng - lon) > 0.0001) {
+          leafletMarkerRef.current.setLatLng([lat, lon]);
+          map.panTo([lat, lon]);
+        }
+      } else {
+        const marker = L.marker([lat, lon], {
+          icon: goldIcon,
+          draggable: true
+        }).addTo(map);
+
+        marker.on("dragend", () => {
+          const pos = marker.getLatLng();
+          latestProps.current.onCoords(pos.lat.toFixed(6), pos.lng.toFixed(6));
+          void reverseOsmRef.current(pos.lat, pos.lng);
+        });
+        leafletMarkerRef.current = marker;
+        map.panTo([lat, lon]);
+      }
+    });
+  }, [latitude, longitude, engine]);
+
+  // Initialize Google Maps when engine === "google"
+  useEffect(() => {
+    if (engine !== "google" || !googleReady || !window.google?.maps || !gmapRef.current || gmapObj.current) return;
+
+    try {
+      const { latitude: currentLatitude, longitude: currentLongitude, value: currentValue } = latestProps.current;
+      const numLat = Number(currentLatitude);
+      const numLon = Number(currentLongitude);
+      const hasCoords = !isNaN(numLat) && !isNaN(numLon) && currentLatitude !== "" && currentLongitude !== "";
+      const centerLat = hasCoords && numLat >= -90 && numLat <= 90 ? numLat : 20.5937;
+      const centerLon = hasCoords && numLon >= -180 && numLon <= 180 ? numLon : 78.9629;
+      const initialCenter = { lat: centerLat, lng: centerLon };
+
+      const map = new window.google.maps.Map(gmapRef.current, {
+        center: initialCenter,
+        zoom: hasCoords ? 11 : 3,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+        zoomControl: true,
+        styles: [
+          { elementType: "geometry", stylers: [{ color: "#171813" }] },
+          { elementType: "labels.text.stroke", stylers: [{ color: "#11120e" }] },
+          { elementType: "labels.text.fill", stylers: [{ color: "#9c9a8d" }] },
+          { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#d9b878" }] },
+          { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#85867a" }] },
+          { featureType: "road", elementType: "geometry", stylers: [{ color: "#252720" }] },
+          { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#3d3624" }] },
+          { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#c8aa6c" }] },
+          { featureType: "water", elementType: "geometry", stylers: [{ color: "#0d1418" }] }
+        ]
+      });
+
+      ggeocoderRef.current = new window.google.maps.Geocoder();
+
+      if (hasCoords) {
+        gmarkerRef.current = new window.google.maps.Marker({
+          map,
+          position: initialCenter,
+          draggable: true,
+          title: currentValue || "Birthplace"
+        });
+        gmarkerRef.current.addListener("dragend", (e: google.maps.MapMouseEvent) => {
+          if (!e.latLng) return;
+          const lat = e.latLng.lat();
+          const lon = e.latLng.lng();
+          latestProps.current.onCoords(lat.toFixed(6), lon.toFixed(6));
+          reverseGoogleRef.current(lat, lon);
+        });
+      }
+
+      map.addListener("click", (e: google.maps.MapMouseEvent) => {
+        if (!e.latLng) return;
+        const lat = e.latLng.lat();
+        const lon = e.latLng.lng();
+        const point = { lat, lng: lon };
+        latestProps.current.onCoords(lat.toFixed(6), lon.toFixed(6));
+
+        if (gmarkerRef.current) {
+          gmarkerRef.current.setPosition(point);
+        } else {
+          gmarkerRef.current = new window.google.maps.Marker({
+            map,
+            position: point,
+            draggable: true,
+            title: "Selected Location"
+          });
+          gmarkerRef.current.addListener("dragend", (ev: google.maps.MapMouseEvent) => {
+            if (!ev.latLng) return;
+            const dlat = ev.latLng.lat();
+            const dlon = ev.latLng.lng();
+            latestProps.current.onCoords(dlat.toFixed(6), dlon.toFixed(6));
+            reverseGoogleRef.current(dlat, dlon);
+          });
+        }
+        reverseGoogleRef.current(lat, lon);
+      });
+
+      gmapObj.current = map;
+    } catch (err) {
+      console.warn("Google Map init error:", err);
+    }
+  }, [engine, googleReady]);
+
+  // Google Places Autocomplete
+  useEffect(() => {
+    if (engine !== "google" || !googleReady || !window.google?.maps?.places || !inputRef.current) return;
+    if (gautocompleteRef.current) return;
+
+    try {
+      const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
+        fields: ["formatted_address", "geometry", "name"]
+      });
+
+      autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace();
+        if (!place || !place.geometry || !place.geometry.location) return;
+
+        const lat = place.geometry.location.lat();
+        const lon = place.geometry.location.lng();
+        const placeName = place.formatted_address || place.name || "";
+        latestProps.current.onLocation(placeName, lat, lon);
+
+        if (gmapObj.current) {
+          const point = { lat, lng: lon };
+          gmapObj.current.panTo(point);
+          gmapObj.current.setZoom(12);
+          if (gmarkerRef.current) {
+            gmarkerRef.current.setPosition(point);
+          } else {
+            gmarkerRef.current = new window.google.maps.Marker({
+              map: gmapObj.current,
+              position: point,
+              draggable: true,
+              title: placeName
+            });
+          }
+        }
+      });
+      gautocompleteRef.current = autocomplete;
+    } catch {}
+  }, [engine, googleReady]);
+
+  function handleSearchInput(text: string) {
+    locationInputVersion.current += 1;
+    onName(text);
+    // Typed place text must not keep coordinates from a previously selected place.
+    onCoords("", "");
+  }
+
+  async function searchOsmLocation() {
+    const query = value.trim();
+    if (query.length < 2) {
+      setMapError("Enter at least two characters for the place search.");
+      return;
+    }
+    setGeocoding(true);
+    setMapError("");
+    const searchVersion = locationInputVersion.current;
+    try {
+      const data = await queryNominatim(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&addressdetails=1`) as NominatimPlace[];
+      if (!data.length) {
+        setMapError("No matching place was found. Try a nearby town or enter coordinates.");
+        return;
+      }
+      if (searchVersion === locationInputVersion.current) handleSelectSuggestion(data[0]);
+    } catch (error) {
+      setMapError(error instanceof Error ? error.message : "Place search is temporarily unavailable.");
+    } finally {
+      setGeocoding(false);
+    }
+  }
+
+  function handleSelectSuggestion(item: NominatimPlace) {
+    const lat = Number(item.lat);
+    const lon = Number(item.lon);
+    const name = item.display_name;
+    onLocation(name, lat, lon);
+    if (leafletMapRef.current) {
+      leafletMapRef.current.flyTo([lat, lon], 12);
+      if (leafletMarkerRef.current) {
+        leafletMarkerRef.current.setLatLng([lat, lon]);
+      }
+    }
+  }
+
+  // Locate current user device coordinates
+  const handleLocateMe = () => {
+    if (!navigator.geolocation) {
+      setMapError("Geolocation is not supported by your browser.");
+      return;
+    }
+    setLocating(true);
+    setMapError("");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocating(false);
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        onCoords(lat.toFixed(6), lon.toFixed(6));
+
+        if (engine === "osm" && leafletMapRef.current) {
+          leafletMapRef.current.flyTo([lat, lon], 13);
+          if (leafletMarkerRef.current) {
+            leafletMarkerRef.current.setLatLng([lat, lon]);
+          }
+          reverseGeocodeOsm(lat, lon);
+        } else if (engine === "google" && gmapObj.current) {
+          const point = { lat, lng: lon };
+          gmapObj.current.panTo(point);
+          gmapObj.current.setZoom(13);
+          if (gmarkerRef.current) {
+            gmarkerRef.current.setPosition(point);
+          }
+          reverseGeocodeGoogle(lat, lon);
+        }
+      },
+      (err) => {
+        setLocating(false);
+        setMapError("Could not retrieve device location: " + err.message);
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
+  };
+
+  const handleCenterOnMarker = () => {
+    const lat = Number(latitude);
+    const lon = Number(longitude);
+    if (isNaN(lat) || isNaN(lon)) return;
+
+    if (engine === "osm" && leafletMapRef.current) {
+      leafletMapRef.current.flyTo([lat, lon], 12);
+    } else if (engine === "google" && gmapObj.current) {
+      gmapObj.current.panTo({ lat, lng: lon });
+      gmapObj.current.setZoom(12);
+    }
+  };
+
+  const handleSaveCustomKey = () => {
+    const trimmed = customKeyInput.trim();
+    try {
+      if (trimmed) {
+        localStorage.setItem("jyotish_gmaps_browser_key", trimmed);
+      } else {
+        localStorage.removeItem("jyotish_gmaps_browser_key");
+      }
+    } catch {}
+    setMapKey(trimmed);
+    setShowKeyConfig(false);
+    setMapError("");
+    if (trimmed) {
+      setEngine("google");
+    } else {
+      setEngine("osm");
+    }
+  };
+
+  const hasCoords = latitude !== "" && longitude !== "" && !isNaN(Number(latitude)) && !isNaN(Number(longitude));
+
+  return (
+    <>
+      {mapKey && (
+        <Script
+          id="google-maps-api"
+          src={`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(mapKey)}&libraries=places,geometry&v=weekly`}
+          strategy="afterInteractive"
+          onLoad={() => {
+            setGoogleReady(true);
+            setMapError("");
+          }}
+          onError={() => {
+            setMapError("Google Maps failed to load. Using OpenStreetMap instead.");
+            setEngine("osm");
+          }}
+        />
+      )}
+
+      {/* Google Places autocomplete or an explicit single-result public place search. */}
+      <div style={{ position: "relative", width: "100%" }}>
+        <div style={{ position: "absolute", left: 11, top: 11, color: "#8f7e53", pointerEvents: "none" }}>
+          <MapPin size={15} />
+        </div>
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(e) => handleSearchInput(e.target.value)}
+          placeholder={engine === "google" ? "Search city, town, or address (Google Places)..." : "Enter a city, town, or address, then find it..."}
+          style={{ paddingLeft: 34, paddingRight: value ? 60 : 34 }}
+          autoComplete="off"
+        />
+        {value && (
+          <button
+            type="button"
+            aria-label="Clear location"
+            onClick={() => {
+              locationInputVersion.current += 1;
+              onName("");
+              onCoords("", "");
+              setMapError("");
+            }}
+            style={{ position: "absolute", right: 10, top: 10, background: "transparent", border: 0, color: "#77766b", cursor: "pointer", padding: 2 }}
+          >
+            <X size={14} />
+          </button>
+        )}
+
+      </div>
+
+      {/* Map toolbar & status */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 7, flexWrap: "wrap", gap: 6 }}>
+        <span className="field-help" style={{ margin: 0 }}>
+          {geocoding ? "Looking up location…" : engine === "google" ? "Google Maps active." : "OpenStreetMap active; no Google key required."}
+        </span>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          {engine === "osm" && (
+            <button type="button" className="map-pill-btn" onClick={searchOsmLocation} disabled={geocoding}>
+              {geocoding ? "Searching…" : "Find location"}
+            </button>
+          )}
+          <button
+            type="button"
+            className="map-pill-btn"
+            onClick={handleLocateMe}
+            disabled={locating}
+            title="Use device GPS geolocation"
+          >
+            <Locate size={11} /> {locating ? "Locating..." : "Locate Me"}
+          </button>
+          <button
+            type="button"
+            className="map-pill-btn"
+            onClick={() => setShowKeyConfig(!showKeyConfig)}
+            title="Google Maps API Key configuration"
+          >
+            <Key size={11} /> {mapKey ? "Google Key Configured" : "Add Google Maps Key"}
+          </button>
+        </div>
+      </div>
+      <p className="field-help">Place search sends the location text to the selected map provider; reverse lookup sends selected coordinates. Birth name, date, and time are not included. Enter coordinates manually for local-only location entry.</p>
+      {engine === "osm" && <p className="field-help">OpenStreetMap place search runs only when you select Find location and is paced with a short cache. OpenStreetMap and CARTO attribution appears on the map.</p>}
+      {mapError && <div className="notice" role="status">{mapError}</div>}
+
+      {/* Optional key input drawer */}
+      {showKeyConfig && (
+        <div className="map-key-box">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontWeight: 500, color: "#d9b878" }}>Google Maps Platform API Key</span>
+            <button type="button" onClick={() => setShowKeyConfig(false)} style={{ background: "transparent", border: 0, color: "#888", cursor: "pointer" }}><X size={12} /></button>
+          </div>
+          <p style={{ margin: "4px 0 0", fontSize: 9, color: "#8a8b80" }}>
+            OpenStreetMap works without a key. For Google Maps, obtain a Google Maps demo key for prototyping or configure a restricted browser key, then enter it here or set <code>NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY</code> in <code>.env</code>.
+          </p>
+          <a href="https://developers.google.com/maps/documentation/javascript/demo-key" target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 6, color: "#d9b878", fontSize: 10 }}>Get a no-cost demo key from Google ↗</a>
+          <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+            <input
+              type="text"
+              value={customKeyInput}
+              onChange={(e) => setCustomKeyInput(e.target.value)}
+              placeholder="AIzaSy..."
+            />
+            <button type="button" className="button gold" style={{ padding: "6px 12px", whiteSpace: "nowrap" }} onClick={handleSaveCustomKey}>
+              Save Key
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Interactive Map Canvas */}
+      <div className="map-wrapper">
+        <div className="map-header">
+          <span className="map-title">
+            <Globe2 size={12} /> {engine === "google" ? "Google Maps" : "OpenStreetMap"}
+          </span>
+          <div className="map-actions">
+            {mapKey && (
+              <button
+                type="button"
+                className="map-pill-btn"
+                onClick={() => setEngine(engine === "google" ? "osm" : "google")}
+                title="Toggle between Google Maps and OpenStreetMap"
+              >
+                Switch to {engine === "google" ? "OpenStreetMap" : "Google Maps"}
+              </button>
+            )}
+            {hasCoords && (
+              <button type="button" className="map-pill-btn" onClick={handleCenterOnMarker} title="Center map on current marker">
+                <RotateCcw size={10} /> Center Marker
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Dynamic canvas depending on engine */}
+        {engine === "osm" ? (
+          <div ref={mapContainerRef} className="map-canvas" aria-label="Celestial Interactive Map" />
+        ) : (
+          <div ref={gmapRef} className="map-canvas" aria-label="Google Maps" />
+        )}
+
+        <div className="map-footer">
+          <span>
+            {hasCoords ? (
+              <>Selected: <span className="map-coords-badge">{Number(latitude).toFixed(6)}°, {Number(longitude).toFixed(6)}°</span></>
+            ) : (
+              "Click anywhere on the map or drag the marker to set coordinates."
+            )}
+          </span>
+          <span>{geocoding ? "Resolving address..." : "Interactive draggable pin"}</span>
+        </div>
+      </div>
+
+      {/* Error notice */}
+      {mapError && (
+        <div className="notice" style={{ marginTop: 8, color: "#e0a59a", borderColor: "#674139" }}>
+          {mapError}
+        </div>
+      )}
+    </>
+  );
+}
+
+declare global {
+  interface Window {
+    google?: typeof google;
+    gm_authFailure?: () => void;
+  }
+}
+
+function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <div className="field">
+      <label>{label}{required ? " *" : ""}</label>
+      {children}
+    </div>
+  );
+}
+
+function Palmistry({ image, file, onImage, setImage, toast }: { image: string | null; file: File | null; onImage: (e: ChangeEvent<HTMLInputElement>) => void; setImage: (v: string | null) => void; toast: (v: string) => void }) {
+  const inputId = "palm-photo";
+  return (
+    <>
+      <div className="page-header">
+        <p className="eyebrow">Primary module · Hasta Samudrika</p>
+        <h1 className="heading">Palmistry</h1>
+        <p className="subheading">A careful visual review starts with clear photographs and keeps observations separate from traditional interpretation.</p>
+      </div>
+      <div className="workspace">
+        <div className="card form-card">
+          <h2 className="card-title">Start a palm observation</h2>
+          <p className="card-desc" style={{ marginBottom: 18 }}>Prepare photographs before starting. Images are previewed on this device and are not uploaded or saved.</p>
+          <div className="upload">
+            {image ? (
+              <div>
+                <Image src={image} alt="Palm photograph preview" width={500} height={360} unoptimized style={{ width: "auto", maxWidth: "100%", height: "auto", maxHeight: 360, objectFit: "contain", borderRadius: 6 }} />
+                <p>{file?.name} · {Math.round((file?.size || 0) / 1024)} KB</p>
+                <button className="button" onClick={() => { setImage(null); toast("Photo removed."); }}>Remove photo</button>
+              </div>
+            ) : (
+              <>
+                <Hand size={24} color="#b69c65" />
+                <strong style={{ display: "block", marginTop: 12, font: "17px Georgia", color: "#e5dfd0" }}>Drop a palm photo here</strong>
+                <p>Or choose a clear, well-lit image from your device.</p>
+                <label className="button" htmlFor={inputId} style={{ cursor: "pointer" }}><Plus size={13} /> Choose photograph</label>
+              </>
+            )}
+            <input className="file-input" id={inputId} type="file" accept="image/jpeg,image/png,image/webp" onChange={onImage} />
+          </div>
+          <div className="section-head"><h2 className="card-title">Photograph checklist</h2></div>
+          {["Full palm, wrist to fingertips", "Clear close-up of the palm lines", "Outer edge below the little finger", "Repeat for both left and right hands"].map((item, i) => (
+            <div key={item} className="activity-row"><span className="activity-dot" /><span>{i + 1}. {item}</span></div>
+          ))}
+          <div className="field-grid" style={{ marginTop: 18 }}>
+            <Field label="Dominant hand">
+              <select defaultValue="right">
+                <option value="right">Right</option>
+                <option value="left">Left</option>
+                <option value="both">Not sure / both</option>
+              </select>
+            </Field>
+            <Field label="Which hand is this photo?">
+              <select defaultValue="right">
+                <option value="right">Right</option>
+                <option value="left">Left</option>
+              </select>
+            </Field>
+          </div>
+          <button className="button gold full-width" style={{ marginTop: 18 }} disabled><Activity size={13} /> Image analysis unavailable</button>
+        </div>
+        <div className="card form-card">
+          <h2 className="card-title">Before you photograph</h2>
+          <div className="notice-inline" style={{ marginTop: 15 }}>Use soft, even light. Keep the camera parallel to the palm and include the full fingers. Avoid filters, glare, and shadows.</div>
+          <div className="progress"><i /></div>
+          <p className="card-desc">Photo upload is a local preview only. Images stay on this device and are cleared when you leave this screen. Private image storage and validated computer-vision analysis are not available yet.</p>
+          <div className="notice"><strong>Interpretive care.</strong> Palm features do not establish lifespan, health, future events, or personality. Any future report will distinguish image observations from traditional readings.</div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Combined({ profiles, onNavigate }: { profiles: Profile[]; onNavigate: (s: string) => void }) {
+  return (
+    <>
+      <div className="page-header">
+        <p className="eyebrow">Primary module · Synthesis</p>
+        <h1 className="heading">Combined Analysis</h1>
+        <p className="subheading">Bring independently saved Jyotish and palmistry work together. A synthesis should respect where the traditions agree and differ.</p>
+      </div>
+      <div className="grid module-grid">
+        <div className="card form-card">
+          <div className="module-icon"><Star size={16} /></div>
+          <h2 className="card-title">Kundli record</h2>
+          <p className="card-desc">{profiles.length ? `${profiles.length} profile${profiles.length === 1 ? "" : "s"} available` : "No saved Kundli profiles yet."}</p>
+          <button className="button" style={{ marginTop: 16 }} onClick={() => onNavigate("Kundli Chart")}>{profiles.length ? "Choose a profile" : "Create a Kundli"}<ArrowRight size={13} /></button>
+        </div>
+        <div className="card form-card">
+          <div className="module-icon"><Hand size={16} /></div>
+          <h2 className="card-title">Palmistry session</h2>
+          <p className="card-desc">No analyzed palm sessions are available to select.</p>
+          <button className="button" style={{ marginTop: 16 }} onClick={() => onNavigate("Palmistry")}>Prepare photographs<ArrowRight size={13} /></button>
+        </div>
+        <div className="card form-card">
+          <div className="module-icon"><HeartHandshake size={16} /></div>
+          <h2 className="card-title">Synthesis report</h2>
+          <p className="card-desc">Reports will cite their supporting chart placements and visual observations independently.</p>
+          <button className="button" style={{ marginTop: 16 }} disabled>Requires both saved analyses</button>
+        </div>
+      </div>
+      <div className="notice" style={{ marginTop: 16 }}><strong>Method boundary.</strong> This section is designed as an interpretation layer, not a third calculation engine. It will not invent agreement between sources.</div>
+    </>
+  );
+}
+
+function Profiles({ profiles, loading, search, setSearch, onProfile, onNew, onDelete, error }: { profiles: Profile[]; loading: boolean; search: string; setSearch: (s: string) => void; onProfile: (p: Profile) => void; onNew: () => void; onDelete: (p: Profile) => void; error: string }) {
+  return (
+    <>
+      <div className="welcome-row">
+        <div>
+          <p className="eyebrow">Workspace</p>
+          <h1 className="heading">My Profiles</h1>
+          <p className="subheading">Keep each person&apos;s birth information in its own profile.</p>
+        </div>
+        <button className="button gold" onClick={onNew}><Plus size={13} /> New profile</button>
+      </div>
+      <div className="card form-card">
+        <div className="field" style={{ maxWidth: 360, marginBottom: 17 }}><label>Search profiles</label><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name" /></div>
+        {loading ? (
+          <div className="empty-state">Loading profiles…</div>
+        ) : profiles.length ? (
+          profiles.map((p) => (
+            <div className="list-row" key={p.id}>
+              <button onClick={() => onProfile(p)} style={{ textAlign: "left", border: 0, background: "transparent", cursor: "pointer", flex: 1 }}>
+                <b>{p.name}</b>
+                <small>{p.birth_date} · {p.birth_time} · {p.birthplace}</small>
+              </button>
+              <button className="icon-btn" aria-label={`Delete ${p.name}`} title="Delete profile and saved analyses" onClick={() => void onDelete(p)}>
+                <X size={13} />
+              </button>
+            </div>
+          ))
+        ) : (
+          <div className="empty-state">
+            <UsersRound size={20} />
+            <strong>No saved profiles yet</strong>
+            <span>Create a Kundli to save a profile in MongoDB.</span>
+          </div>
+        )}
+        {error && <div className="notice">{error}</div>}
+      </div>
+    </>
+  );
+}
+
+function Reports({ onOpenChart }: { onOpenChart: (report: SavedChart) => void }) {
+  const [reports, setReports] = useState<SavedChart[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    fetch(`${API}/api/kundli/history`, { credentials: "include" })
+      .then(async (response) => {
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.detail || "Could not load chart history.");
+        if (active) setReports(body);
+      })
+      .catch((reason) => {
+        if (active) setError(reason instanceof Error ? reason.message : "Could not load chart history.");
+      })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+
+  return (
+    <>
+      <div className="page-header">
+        <p className="eyebrow">Workspace</p>
+        <h1 className="heading">Saved Reports</h1>
+        <p className="subheading">Review saved Kundli calculations and reopen their chart details.</p>
+      </div>
+      <div className="card empty-state">
+        {loading ? <span>Loading saved chart history…</span> : error ? <><strong>Chart history is unavailable</strong><span>{error}</span></> : reports.length ? (
+          <div style={{ width: "100%" }}>
+            <div className="empty-icon"><FileText size={20} /></div>
+            <strong>{reports.length} saved chart{reports.length === 1 ? "" : "s"}</strong>
+            {reports.map((report) => (
+              <button className="list-row" key={report.record_id} onClick={() => onOpenChart(report)} style={{ width: "100%", textAlign: "left", cursor: "pointer", color: "inherit", background: "transparent" }}>
+                <span><b>{report.profile_name}</b><small>{new Date(report.created_at).toLocaleString()} · {String((report.calculation.ascendant as { sign?: string } | undefined)?.sign || "Ascendant unavailable")}</small></span>
+                <ArrowRight size={14} />
+              </button>
+            ))}
+          </div>
+        ) : <><div className="empty-icon"><FileText size={20} /></div><strong>No saved charts yet</strong><span>Create a Kundli to see its saved calculation history here.</span></>}
+      </div>
+    </>
+  );
+}
+
+function Knowledge({ tab, setTab }: { tab: string; setTab: (s: string) => void }) {
+  const refs = ["Brihat Parashara Hora Shastra", "Brihat Jataka", "Phaladeepika", "Saravali", "Jataka Parijata", "Hasta Samudrika traditions"];
+  return (
+    <>
+      <div className="page-header">
+        <p className="eyebrow">Study</p>
+        <h1 className="heading">Knowledge Library</h1>
+        <p className="subheading">A source catalogue for classical references, with editions and interpretive traditions kept distinct.</p>
+      </div>
+      <div className="card form-card">
+        <div className="tabs">
+          <button className={`tab ${tab === "Overview" ? "active" : ""}`} onClick={() => setTab("Overview")}>Sources</button>
+          <button className={`tab ${tab === "Methods" ? "active" : ""}`} onClick={() => setTab("Methods")}>Method notes</button>
+        </div>
+        {tab === "Overview" ? (
+          refs.map((r) => (
+            <div className="list-row" key={r}>
+              <span>
+                <b>{r}</b>
+                <small>Reference catalogue entry · verified edition required before quotation</small>
+              </span>
+              <BookOpen size={14} color="#9b875b" />
+            </div>
+          ))
+        ) : (
+          <div className="notice-inline">
+            Classical text editions can differ in readings, chapter numbering, and translation. Quotations and verse-level AI citations will remain unavailable until licensed, verifiable source material is catalogued.
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function Assistant({ profile, profiles, onSelectProfile }: { profile: Profile | null; profiles: Profile[]; onSelectProfile: (p: Profile | null) => void }) {
+  const [question, setQuestion] = useState("");
+  const [messages, setMessages] = useState<{ role: string; text: string }[]>([]);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { setMessages([]); }, [profile?.id]);
+
+  async function ask(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const q = question.trim();
+    if (!q) return;
+    const history = messages.slice(-10).map((message) => ({ role: message.role, content: message.text.slice(0, 2000) }));
+    setMessages((m) => [...m, { role: "user", text: q }]);
+    setQuestion("");
+    setBusy(true);
+    try {
+      const res = await fetch(`${API}/api/assistant`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: q, profile_id: profile?.id ?? null, history })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Assistant is not configured.");
+      setMessages((m) => [...m, { role: "assistant", text: data.answer }]);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "The assistant could not answer this request.";
+      setMessages((m) => [...m, { role: "assistant", text: detail }]);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="page-header">
+        <p className="eyebrow">Research assistant</p>
+        <h1 className="heading">AI Astrology Assistant</h1>
+        <p className="subheading">Ask about a saved D1 chart or general Jyotish concepts. Answers use the selected calculation and recent chat turns.</p>
+      </div>
+      <div className="card form-card">
+        <div className="field" style={{ maxWidth: 440, marginBottom: 12 }}>
+          <label htmlFor="assistant-profile">Chart context</label>
+          <select
+            id="assistant-profile"
+            value={profile?.id ?? ""}
+            onChange={(event) => {
+              setMessages([]);
+              onSelectProfile(profiles.find((item) => item.id === event.target.value) ?? null);
+            }}
+          >
+            <option value="">General question · no chart context</option>
+            {profiles.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.birthplace}</option>)}
+          </select>
+        </div>
+        <div className="notice-inline">
+          <Sparkles size={13} style={{ verticalAlign: "middle", marginRight: 6, color: "#c7ad70" }} />
+          {profile ? `Using saved D1 placements for ${profile.name}.` : "No personal chart data will be sent for this question."} The selected chart’s birth identifiers are omitted. Your question and recent chat turns are sent to Gemini. Classical source citations are unavailable until the reference library is connected.
+        </div>
+        <div style={{ minHeight: 190, padding: "13px 0" }}>
+          {messages.length ? (
+            messages.map((m, i) => (
+              <div key={i} className="list-row">
+                <span>
+                  <b>{m.role === "user" ? "You" : "Assistant"}</b>
+                  <small style={{ color: "#c4c0b4", lineHeight: 1.6 }}>{m.text}</small>
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="empty-state">
+              <Sparkles size={20} />
+              <strong>Questions with sources, not guesswork</strong>
+              <span>Try: “What is a Nakshatra?” or ask about a saved calculation.</span>
+            </div>
+          )}
+        </div>
+        <form onSubmit={ask} className="location-box">
+          <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Ask a question…" />
+          <button className="button gold" disabled={busy || !question.trim()}>
+            <ArrowRight size={13} />
+          </button>
+        </form>
+      </div>
+    </>
+  );
+}
+
+function Settings({ precision, setPrecision }: { precision: "seconds" | "minutes"; setPrecision: (value: "seconds" | "minutes") => void }) {
+  const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [theme, setTheme] = useState("dark");
+  const [gmapsKey, setGmapsKey] = useState("");
+
+  useEffect(() => {
+    try {
+      const value = localStorage.getItem("jyotish-preferences");
+      if (value) {
+        const p = JSON.parse(value);
+        setTheme(p.theme || "dark");
+      }
+      const k = localStorage.getItem("jyotish_gmaps_browser_key");
+      if (k) setGmapsKey(k);
+    } catch {}
+  }, []);
+
+  function save() {
+    try {
+      localStorage.setItem("jyotish-preferences", JSON.stringify({ theme, precision }));
+      if (gmapsKey.trim()) {
+        localStorage.setItem("jyotish_gmaps_browser_key", gmapsKey.trim());
+      } else {
+        localStorage.removeItem("jyotish_gmaps_browser_key");
+      }
+      setSaveError("");
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2200);
+    } catch {
+      setSaved(false);
+      setSaveError("Browser storage is unavailable, so these settings could not be saved.");
+    }
+  }
+
+  return (
+    <>
+      <div className="page-header">
+        <p className="eyebrow">Workspace</p>
+        <h1 className="heading">Settings</h1>
+        <p className="subheading">Personalize birth-time entry, chart defaults, and Google Maps integration on this device.</p>
+      </div>
+      <div className="card form-card" style={{ maxWidth: 650 }}>
+        <div className="field-grid">
+          <Field label="Appearance">
+            <select value={theme} onChange={(e) => setTheme(e.target.value)}>
+              <option value="dark">Dark</option>
+              <option value="light" disabled>Light · coming later</option>
+            </select>
+          </Field>
+          <Field label="Birth time precision">
+            <select value={precision} onChange={(e) => setPrecision(e.target.value as "seconds" | "minutes")}>
+              <option value="seconds">Seconds</option>
+              <option value="minutes">Minutes</option>
+            </select>
+          </Field>
+          <div className="field full">
+            <label>Google Maps Browser Key (Optional)</label>
+            <input
+              type="text"
+              value={gmapsKey}
+              onChange={(e) => setGmapsKey(e.target.value)}
+              placeholder="e.g. AIzaSy... (or configure NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY in .env)"
+            />
+            <span className="field-help">Optional. Enables Google Maps and Google Places search. OpenStreetMap works without a key. <a href="https://developers.google.com/maps/documentation/javascript/demo-key" target="_blank" rel="noreferrer">Get a no-cost demo key ↗</a></span>
+          </div>
+        </div>
+        <button className="button gold" style={{ marginTop: 17 }} onClick={save}>
+          <Save size={13} />
+          {saved ? "Preferences saved" : "Save preferences"}
+        </button>
+        {saveError && <div className="notice" role="alert">{saveError}</div>}
+        <div className="notice">Preferences and API keys saved here remain in your browser. Server credentials are never sent to the browser.</div>
+      </div>
+    </>
+  );
+}

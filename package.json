@@ -1,0 +1,13 @@
+{
+  "name": "jyotish-studio-workspace",
+  "private": true,
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "dev": "node scripts/dev.mjs",
+    "dev:web": "npm --prefix frontend run dev",
+    "dev:api": "node scripts/dev.mjs api",
+    "start": "npm --prefix frontend run build && node scripts/dev.mjs --prod",
+    "serve": "node scripts/dev.mjs --prod",
+    "build": "npm --prefix frontend run build"
+  }
+}
