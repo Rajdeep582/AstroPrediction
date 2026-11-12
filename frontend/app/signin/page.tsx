@@ -49,10 +49,10 @@ function AuthForm() {
 
   const v = {
     username: /^[A-Za-z0-9_.-]{3,32}$/.test(username) ? "" : "3–32 letters, digits, dot, dash or underscore",
-    password: password.length >= 10 ? "" : "At least 10 characters",
+    password: password.length < 4 ? "At least 4 characters" : mode === "signup" && password.length > 10 ? "At most 10 characters" : "",
     confirm: mode === "signin" || confirm === password ? "" : "Passwords don't match",
   };
-  const strength = Math.min(4, [password.length >= 10, /[A-Z]/.test(password) && /[a-z]/.test(password), /\d/.test(password), /[^A-Za-z0-9]/.test(password) || password.length >= 16].filter(Boolean).length);
+  const strength = Math.min(4, [password.length >= 6, /[A-Z]/.test(password) && /[a-z]/.test(password), /\d/.test(password), /[^A-Za-z0-9]/.test(password) || password.length >= 9].filter(Boolean).length);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();

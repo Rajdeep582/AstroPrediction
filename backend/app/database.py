@@ -73,6 +73,7 @@ async def close_database():
 
 
 async def create_indexes(database):
+    await database.users.create_index([("id", ASCENDING)], unique=True)
     await database.users.create_index([("username_normalized", ASCENDING)], unique=True)
     await database.sessions.create_index([("token_hash", ASCENDING)], unique=True)
     await database.sessions.create_index([("expires_at", ASCENDING)], expireAfterSeconds=0)

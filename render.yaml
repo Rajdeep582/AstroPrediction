@@ -27,3 +27,4 @@ services:
         value: "true"
       - key: DATA_ENCRYPTION_KEY
         sync: false
+

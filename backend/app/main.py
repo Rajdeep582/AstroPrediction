@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import secrets
 import sys
+import time
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -57,10 +58,16 @@ else:
 try:
     # pyrefly: ignore[missing-import]
     from pwdlib import PasswordHash
+    from pwdlib.hashers.argon2 import Argon2Hasher
 
-    _pwd_hasher = PasswordHash.recommended()
+    # Lighten Argon2 cost for snappy response on cloud instances (1 pass, 19MB, 1 thread)
+    _pwd_hasher = PasswordHash((Argon2Hasher(time_cost=1, memory_cost=19456, parallelism=1),))
 except Exception:
-    _pwd_hasher = None
+    try:
+        from pwdlib import PasswordHash
+        _pwd_hasher = PasswordHash.recommended()
+    except Exception:
+        _pwd_hasher = None
 
 
 def hash_password(password: str) -> str:
@@ -71,9 +78,9 @@ def hash_password(password: str) -> str:
             pass
     salt = secrets.token_hex(16)
     dk = hashlib.pbkdf2_hmac(
-        "sha256", password.encode("utf-8"), salt.encode("utf-8"), 100_000
+        "sha256", password.encode("utf-8"), salt.encode("utf-8"), 25_000
     )
-    return f"pbkdf2_sha256$100000${salt}${dk.hex()}"
+    return f"pbkdf2_sha256$25000${salt}${dk.hex()}"
 
 
 def verify_password(password: str, hashed: str) -> bool:
@@ -130,6 +137,17 @@ app.include_router(jyotish_router)
 SESSION_COOKIE = "jyotish_session"
 SESSION_LIFETIME = 60 * 60 * 24 * 14
 COOKIE_SAMESITE = "none" if SESSION_HTTPS_ONLY else "lax"
+SESSION_CACHE_TTL = 60.0  # cache active sessions in-memory for 60s to avoid redundant Atlas roundtrips
+_session_cache: dict[str, tuple[float, dict]] = {}
+
+
+def invalidate_session(token_hash: str | None = None, user_id: str | None = None):
+    if token_hash:
+        _session_cache.pop(token_hash, None)
+    if user_id:
+        to_del = [k for k, (_, u) in _session_cache.items() if u.get("id") == user_id]
+        for k in to_del:
+            _session_cache.pop(k, None)
 
 
 async def require_db():
@@ -148,24 +166,43 @@ def serialize(document: dict) -> dict:
 
 async def authenticated_user(request: Request) -> dict:
     token = request.cookies.get(SESSION_COOKIE)
-    db = await require_db()
     if not token:
         raise HTTPException(status_code=401, detail="Sign in to use this workspace.")
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+
+    # Instant in-memory cache check: eliminates roundtrip DB lookups for active users
+    cached = _session_cache.get(token_hash)
+    if cached is not None:
+        exp, user = cached
+        if time.monotonic() < exp:
+            return user
+        _session_cache.pop(token_hash, None)
+
+    db = await require_db()
     try:
         now = datetime.now(UTC)
-        token_hash = hashlib.sha256(token.encode()).hexdigest()
         session = await db.sessions.find_one(
             {"token_hash": token_hash, "expires_at": {"$gt": now}}, {"_id": 0}
         )
         if not session:
             await db.sessions.delete_one({"token_hash": token_hash})
+            _session_cache.pop(token_hash, None)
             raise HTTPException(status_code=401, detail="Your session expired. Please sign in again.")
         user = await db.users.find_one(
             {"id": session["user_id"]}, {"_id": 0, "password_hash": 0}
         )
         if not user:
             await db.sessions.delete_one({"token_hash": token_hash})
+            _session_cache.pop(token_hash, None)
             raise HTTPException(status_code=401, detail="Your account session is no longer valid.")
+
+        _session_cache[token_hash] = (time.monotonic() + SESSION_CACHE_TTL, user)
+        if len(_session_cache) > 1000:
+            now_m = time.monotonic()
+            stale = [k for k, (e, _) in _session_cache.items() if e < now_m]
+            for k in stale:
+                _session_cache.pop(k, None)
+
         return user
     except HTTPException:
         raise
@@ -177,12 +214,12 @@ def public_user(user: dict) -> dict:
     return {"id": user["id"], "username": crypto.decrypt_value(user["username"])}
 
 
-async def issue_session(db, user_id: str, request: Request, response: Response):
+async def issue_session(db, user_id: str, request: Request, response: Response, cached_user: dict | None = None):
     old_token = request.cookies.get(SESSION_COOKIE)
     if old_token:
-        await db.sessions.delete_one(
-            {"token_hash": hashlib.sha256(old_token.encode()).hexdigest()}
-        )
+        old_hash = hashlib.sha256(old_token.encode()).hexdigest()
+        invalidate_session(token_hash=old_hash)
+        await db.sessions.delete_one({"token_hash": old_hash})
     token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     now = datetime.now(UTC)
@@ -194,6 +231,8 @@ async def issue_session(db, user_id: str, request: Request, response: Response):
             "expires_at": now + timedelta(seconds=SESSION_LIFETIME),
         }
     )
+    if cached_user:
+        _session_cache[token_hash] = (time.monotonic() + SESSION_CACHE_TTL, cached_user)
     response.set_cookie(
         key=SESSION_COOKIE,
         value=token,
@@ -223,6 +262,8 @@ async def signup(credentials: Credentials, request: Request, response: Response)
     username_normalized = crypto.blind_index(credentials.username.lower())
     user_id = str(uuid4())
     password = credentials.password.get_secret_value()
+    if len(password) > 10:
+        raise HTTPException(status_code=422, detail="Password must be 4 to 10 characters.")
     pw_hash = await run_in_threadpool(hash_password, password)
     user = {
         "id": user_id,
@@ -237,7 +278,7 @@ async def signup(credentials: Credentials, request: Request, response: Response)
         raise HTTPException(
             status_code=409, detail="That username is already in use."
         ) from exc
-    await issue_session(db, user_id, request, response)
+    await issue_session(db, user_id, request, response, cached_user=user)
     return {"user": public_user(user)}
 
 
@@ -255,17 +296,18 @@ async def signin(credentials: Credentials, request: Request, response: Response)
         raise HTTPException(
             status_code=401, detail="Username or password is incorrect."
         )
-    await issue_session(db, user["id"], request, response)
+    await issue_session(db, user["id"], request, response, cached_user=user)
     return {"user": public_user(user)}
 
 
 @app.post("/api/auth/signout")
 async def signout(request: Request, response: Response):
     token = request.cookies.get(SESSION_COOKIE)
-    if token and await database.ensure_connected():
-        await database.db.sessions.delete_one(
-            {"token_hash": hashlib.sha256(token.encode()).hexdigest()}
-        )
+    if token:
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        invalidate_session(token_hash=token_hash)
+        if await database.ensure_connected():
+            await database.db.sessions.delete_one({"token_hash": token_hash})
     response.delete_cookie(
         key=SESSION_COOKIE,
         path="/",
@@ -279,9 +321,19 @@ async def signout(request: Request, response: Response):
 @app.get("/api/auth/me")
 async def session_user(request: Request):
     token = request.cookies.get(SESSION_COOKIE)
-    if not token or not await database.ensure_connected():
+    if not token:
         return {"user": None}
     token_hash = hashlib.sha256(token.encode()).hexdigest()
+
+    cached = _session_cache.get(token_hash)
+    if cached is not None:
+        exp, user = cached
+        if time.monotonic() < exp:
+            return {"user": public_user(user)}
+        _session_cache.pop(token_hash, None)
+
+    if not await database.ensure_connected():
+        return {"user": None}
     session = await database.db.sessions.find_one(
         {"token_hash": token_hash, "expires_at": {"$gt": datetime.now(UTC)}}, {"_id": 0}
     )
@@ -293,6 +345,7 @@ async def session_user(request: Request):
     if not user:
         await database.db.sessions.delete_one({"token_hash": token_hash})
         return {"user": None}
+    _session_cache[token_hash] = (time.monotonic() + SESSION_CACHE_TTL, user)
     return {"user": public_user(user)}
 
 
@@ -500,6 +553,7 @@ async def delete_account(request: Request, response: Response, user: dict = Depe
         await db[name].delete_many({"owner_id": user["id"]})
     await db.sessions.delete_many({"user_id": user["id"]})
     await db.users.delete_one({"id": user["id"]})
+    invalidate_session(user_id=user["id"])
     response.delete_cookie(key=SESSION_COOKIE, path="/", secure=SESSION_HTTPS_ONLY, httponly=True, samesite=COOKIE_SAMESITE)
     return {"deleted": True}
 

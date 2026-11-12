@@ -25,17 +25,43 @@ export function useAuth() {
   return ctx;
 }
 
+const USER_CACHE_KEY = "jyotish_cached_user";
+
+function getCachedUser(): Account | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(USER_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedUser(u: Account | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (u && u.username) {
+      localStorage.setItem(USER_CACHE_KEY, JSON.stringify(u));
+    } else {
+      localStorage.removeItem(USER_CACHE_KEY);
+    }
+  } catch {}
+}
+
 function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<Account | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<Account | null>(getCachedUser);
+  const [loading, setLoading] = useState<boolean>(() => !getCachedUser());
 
   const refresh = useCallback(async () => {
     try {
       const res = await api<{ user?: Account | null } | Account | null>("/api/auth/me", { retries: 1 });
       const u = res && "user" in res ? res.user ?? null : (res as Account | null);
-      setUser(u && (u as Account).username ? (u as Account) : null);
+      const validUser = u && (u as Account).username ? (u as Account) : null;
+      setUser(validUser);
+      setCachedUser(validUser);
     } catch {
       setUser(null);
+      setCachedUser(null);
     } finally {
       setLoading(false);
     }
@@ -47,11 +73,12 @@ function AuthProvider({ children }: { children: ReactNode }) {
     const res = await api<{ user?: Account } | Account>(`/api/auth/${kind}`, { method: "POST", body: { username, password } });
     const u = (res && "user" in res ? res.user : res) as Account;
     setUser(u);
+    setCachedUser(u);
     return u;
   }, []);
 
   const signout = useCallback(async () => {
-    try { await api("/api/auth/signout", { method: "POST" }); } finally { setUser(null); clearCache(); }
+    try { await api("/api/auth/signout", { method: "POST" }); } finally { setUser(null); setCachedUser(null); clearCache(); }
   }, []);
 
   const value = useMemo<AuthCtx>(() => ({

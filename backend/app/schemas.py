@@ -107,7 +107,7 @@ class Credentials(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     username: str = Field(min_length=3, max_length=32, pattern=r"^[A-Za-z0-9_.-]{3,32}$")
-    password: SecretStr = Field(min_length=10, max_length=128)
+    password: SecretStr = Field(min_length=4, max_length=128)  # signup additionally caps at 10
 
     @field_validator("username", mode="before")
     @classmethod
