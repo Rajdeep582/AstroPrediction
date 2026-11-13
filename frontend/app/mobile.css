@@ -1,0 +1,85 @@
+/* ───────── Mobile refinement (loaded last) ─────────
+   One consistent gutter, comfortable card padding, readable line lengths, no edge-hugging text. */
+
+@media (max-width: 768px) {
+  :root { --gutter: 16px; }
+  .content { padding: 18px var(--gutter) calc(104px + env(safe-area-inset-bottom, 0px)) !important; }
+  .glass { padding: 18px 16px !important; border-radius: 16px !important; }
+  .an-card { padding: 16px 15px 14px !important; }
+  .page-head { margin-bottom: 18px; gap: 14px; }
+  .page-head .display { font-size: clamp(28px, 8vw, 36px); line-height: 1.12; }
+  .lede { font-size: 15px; line-height: 1.6; }
+  p, li, dd { overflow-wrap: break-word; }
+  .card-title { font-size: 21px; }
+  .card-head { flex-wrap: wrap; }
+
+  /* page header buttons stack under the title instead of squeezing */
+  .page-head { display: grid !important; }
+  .page-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .page-actions .btn { flex: 1 1 auto; }
+
+  /* forms: equal-width rows collapse to one column, fields get breathing room */
+  .grid-2, .grid-3 { grid-template-columns: 1fr !important; gap: 10px; }
+  .form-card { gap: 14px; }
+
+  /* sticky mobile top bar + floating bottom nav */
+  .mobile-top { padding: 10px var(--gutter) !important; padding-top: max(10px, env(safe-area-inset-top)) !important; }
+  .bottom-nav { left: 10px !important; right: 10px !important; padding: 5px !important; border-radius: 18px !important; }
+  .bottom-nav a { min-height: 52px; display: grid; place-items: center; align-content: center; gap: 3px; font-size: 11.5px; -webkit-tap-highlight-color: transparent; }
+
+  /* Saved readings: table → stacked cards */
+  .table-wrap:has(.tbl-cards) { padding: 0 !important; background: none !important; border: 0 !important; box-shadow: none !important; overflow: visible !important; }
+  .table-wrap:has(.tbl-cards)::before { display: none !important; }
+  .tbl-cards, .tbl-cards tbody { display: block; width: 100%; }
+  .tbl-cards thead { display: none; }
+  .tbl-cards tr { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; padding: 16px; margin-bottom: 12px; border-radius: 16px;
+    background: linear-gradient(160deg, rgba(38,28,82,.72), rgba(14,12,34,.86)); border: 1px solid var(--line); }
+  .tbl-cards td { display: grid; gap: 2px; padding: 0 !important; border: 0 !important; font-size: 14.5px; }
+  .tbl-cards td::before { content: attr(data-label); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); }
+  .tbl-cards td.td-name { grid-column: 1 / -1; font: 500 20px/1.2 var(--serif); }
+  .tbl-cards td.td-name::before { display: none; }
+  .tbl-cards td.td-open { grid-column: 1 / -1; }
+  .tbl-cards td.td-open::before { display: none; }
+  .tbl-cards td.td-open .btn { width: 100%; min-height: 44px; }
+
+  /* analysis page: section nav sits flush under the top bar and scrolls sideways */
+  .an-nav { top: 56px !important; margin: 0 calc(-1 * var(--gutter)) !important; padding: 8px var(--gutter) !important; border-radius: 0 !important;
+    background: rgba(9,8,22,.94) !important; border-left: 0 !important; border-right: 0 !important; }
+  .an-body { gap: 28px; }
+  .an-hero { gap: 16px; }
+  .an-hero h1, .an-hero .display { font-size: clamp(30px, 9vw, 40px) !important; }
+  .an-meta { gap: 6px 14px; font-size: 13px; }
+  .an-chip { font-size: 12px; padding: 5px 10px; }
+  .ad { grid-template-columns: 1fr auto !important; }
+  .facts div { grid-template-columns: 112px 1fr !important; }
+  .dt { height: 40px; }
+
+  /* AI astrologer chat */
+  .chat .chat-log { padding: 14px 12px !important; }
+  .chat .bubble { font-size: 15px; line-height: 1.65; }
+  .chat-input { padding: 10px 12px !important; gap: 8px; }
+
+  /* comfortable tap targets everywhere */
+  .btn, .chip, .seg button, .tab { min-height: 44px; }
+  .btn-sm { min-height: 38px; }
+  select, input:not([type=checkbox]):not([type=radio]), textarea { min-height: 48px; }
+}
+
+@media (max-width: 380px) {
+  :root { --gutter: 14px; }
+  .glass { padding: 16px 14px !important; }
+  .an-card { padding: 14px 13px 12px !important; }
+  .bottom-nav a { font-size: 10.5px; }
+  .tbl-cards tr { grid-template-columns: 1fr; }
+}
+
+/* Smooth, native-feeling touch scrolling & taps */
+@media (hover: none) {
+  html { -webkit-text-size-adjust: 100%; }
+  body { overscroll-behavior-y: none; }
+  a, button { -webkit-tap-highlight-color: transparent; }
+  .btn:active, .chip:active, .bottom-nav a:active { transform: scale(.97); transition: transform .08s; }
+}
+
+/* Small cards render immediately (deferred rendering caused late, faded-looking paints) */
+.feature-wrap, .cta-band, .learn-sec, .remedy, .transit, .profile { content-visibility: visible !important; contain-intrinsic-size: none !important; }

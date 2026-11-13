@@ -1,5 +1,6 @@
 "use client";
 
+import { clearSessionState } from "@/lib/sessionState";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode, useLayoutEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, Info, TriangleAlert, X } from "lucide-react";
@@ -86,7 +87,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signout = useCallback(async () => {
-    try { await api("/api/auth/signout", { method: "POST" }); } finally { setUser(null); setCachedUser(null); clearCache(); }
+    try { await api("/api/auth/signout", { method: "POST" }); } finally { setUser(null); setCachedUser(null); clearCache(); clearSessionState(); }
   }, []);
 
   const value = useMemo<AuthCtx>(() => ({

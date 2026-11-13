@@ -9,6 +9,7 @@ import "./analysis.css";
 import "./readable.css";
 import "./ai.css";
 import "./perf.css";
+import "./mobile.css";
 
 const serif = Cormorant_Garamond({ subsets: ["latin"], weight: ["400", "500", "600"], style: ["normal", "italic"], variable: "--font-serif", display: "swap" });
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });

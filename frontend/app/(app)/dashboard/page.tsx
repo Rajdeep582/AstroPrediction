@@ -103,7 +103,7 @@ function Dash() {
         <h2 id="mods" className="section-title sm">Quick access</h2>
         <div className="module-grid">
           {MODULES.map(({ href, icon: Icon, title, text }, i) => (
-            <motion.div key={href} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05 }}>
+            <motion.div key={href} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, delay: i * 0.03 }}>
               <Link href={href} className="glass module"><Icon size={20} aria-hidden /><b>{title}</b><small>{text}</small><ArrowUpRight size={15} className="mod-arrow" aria-hidden /></Link>
             </motion.div>
           ))}

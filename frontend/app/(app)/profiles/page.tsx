@@ -39,7 +39,7 @@ function Profiles() {
         <div className="profile-grid">
           <AnimatePresence>
             {list.map((p) => (
-              <motion.article key={p.id} layout initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="glass profile">
+              <motion.article key={p.id} layout="position" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ duration: 0.18 }} className="glass profile">
                 <div className="row-between">
                   <span className="avatar lg" aria-hidden>{p.name.slice(0, 1).toUpperCase()}</span>
                   {confirm === p.id ? (

@@ -9,6 +9,7 @@ import { RequireAuth } from "@/components/ui";
 import { useToast } from "@/components/providers";
 import { API, api } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
+import { useSessionState } from "@/lib/sessionState";
 import type { Profile } from "@/lib/types";
 
 type Msg = { role: "user" | "assistant"; content: string };
@@ -68,18 +69,25 @@ function CrystalBall({ thinking = false }: { thinking?: boolean }) {
 function Assistant() {
   const toast = useToast();
   const { data: profiles = [], loading } = useApi<Profile[]>("/api/profiles");
-  const [pid, setPid] = useState<string>("");
-  const [phase, setPhase] = useState<"intro" | "study" | "chat">("intro");
+  // consultation persists while moving between pages (reset on refresh)
+  const [pid, setPid] = useSessionState<string>("ai:pid", "");
+  const [phase, setPhase] = useSessionState<"intro" | "study" | "chat">("ai:phase", "intro");
   const [studyReady, setStudyReady] = useState(false);
-  const [summary, setSummary] = useState<Summary | null>(null);
-  const [msgs, setMsgs] = useState<Msg[]>([]);
-  const [q, setQ] = useState("");
+  const [summary, setSummary] = useSessionState<Summary | null>("ai:summary", null);
+  const [msgs, setMsgs] = useSessionState<Msg[]>("ai:msgs", []);
+  const [q, setQ] = useSessionState<string>("ai:draft", "");
   const [busy, setBusy] = useState(false);
   const abort = useRef<AbortController | null>(null);
   const log = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => { if (!pid && profiles[0]) setPid(profiles[0].id); }, [profiles, pid]);
+  useEffect(() => { if (!pid && profiles[0]) setPid(profiles[0].id); }, [profiles, pid, setPid]);
+  // left mid-study → back to the intro; left mid-answer → stop the stream and drop the empty bubble
+  useEffect(() => {
+    if (phase === "study") setPhase("intro");
+    setMsgs((m) => (m.length && m[m.length - 1].role === "assistant" && !m[m.length - 1].content ? m.slice(0, -2) : m));
+    return () => { abort.current?.abort(); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { const el = log.current; if (el) el.scrollTop = el.scrollHeight; }, [msgs, busy]);
 
   const begin = async () => {
@@ -136,7 +144,7 @@ function Assistant() {
         if (!got) { setMsgs((m) => m.slice(0, -2)); setQ(question); }
       }
     } finally { setBusy(false); abort.current = null; input.current?.focus(); }
-  }, [busy, msgs, pid, summary, toast]);
+  }, [busy, msgs, pid, summary, toast, setMsgs, setQ]);
 
   const submit = (e: FormEvent) => { e.preventDefault(); void ask(q); };
 

@@ -32,7 +32,10 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
     const loop = (t: number) => { l.raf(t); raf = requestAnimationFrame(loop); };
     raf = requestAnimationFrame(loop);
     setLenis(l);
-    return () => { cancelAnimationFrame(raf); l.destroy(); setLenis(null); };
+    // keep Lenis' idea of the page height in sync with real content (route changes, expanding cards, images)
+    const ro = new ResizeObserver(() => l.resize());
+    ro.observe(document.body);
+    return () => { ro.disconnect(); cancelAnimationFrame(raf); l.destroy(); setLenis(null); };
   }, [prefs.reduceMotion]);
 
   // Cheap scrolling flag (a JS variable, not a class: toggling a root class restyles the whole page).
@@ -70,10 +73,50 @@ function RouteEffects({ lenis }: { lenis: Lenis | null }) {
     return () => document.removeEventListener("click", onClick, true);
   }, []);
 
+  // Remember scroll position per page. Going back to the previous page restores it; new pages start at the top.
+  const positions = useRef(new Map<string, number>());
+  const stack = useRef<string[]>([]);
+  const lastKey = useRef("");
+  const navigating = useRef(false);
   useEffect(() => {
-    if (first.current) { first.current = false; return; }
-    if (lenis) lenis.scrollTo(0, { immediate: true, force: true });
-    else window.scrollTo(0, 0);
+    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+    // a Map write per scroll event is negligible; no frame-throttling needed
+    const onScroll = () => { if (lastKey.current && !navigating.current) positions.current.set(lastKey.current, window.scrollY); };
+    // while a page swap is in progress the browser emits scroll events for the outgoing page — ignore them
+    const freeze = (e: Event) => {
+      if (e.type === "click") {
+        if (!(e.target as HTMLElement).closest?.("a[href]")) return;
+        if (lastKey.current) positions.current.set(lastKey.current, window.scrollY); // exact spot at the moment of leaving
+      }
+      navigating.current = true;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    document.addEventListener("click", freeze, true);
+    window.addEventListener("popstate", freeze, true);
+    return () => { window.removeEventListener("scroll", onScroll); document.removeEventListener("click", freeze, true); window.removeEventListener("popstate", freeze, true); };
+  }, []);
+
+  useEffect(() => {
+    const key = path + "?" + search.toString();
+    const prev = lastKey.current;
+    lastKey.current = key;
+    const st = stack.current;
+    const isBack = st.length >= 2 && st[st.length - 2] === key;
+    if (isBack) st.pop(); else if (st[st.length - 1] !== key) st.push(key);
+    if (st.length > 50) st.shift();
+    const unfreeze = () => setTimeout(() => { navigating.current = false; }, 700);
+    if (first.current) { first.current = false; unfreeze(); return; }
+    if (prev === key) { unfreeze(); return; }
+    unfreeze();
+    const target = isBack ? positions.current.get(key) ?? 0 : 0;
+    const go = (y: number) => { if (lenis) { lenis.resize(); lenis.scrollTo(y, { immediate: true, force: true }); } else window.scrollTo(0, y); };
+    go(target);
+    if (target > 0) {
+      // the page may still be rendering: retry briefly until it is tall enough to reach the saved spot
+      let tries = 0;
+      const again = () => { if (Math.abs(window.scrollY - target) > 4 && tries++ < 15) { go(target); setTimeout(again, 40); } };
+      setTimeout(again, 30);
+    }
     setState("done");
     clearTimeout(timer.current);
     timer.current = setTimeout(() => setState("idle"), 380);

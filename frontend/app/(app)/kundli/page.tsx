@@ -12,6 +12,7 @@ import { Card, Empty, PageHeader, SkeletonBlock } from "@/components/ui";
 import { useAuth, usePrefs, useToast } from "@/components/providers";
 import { api } from "@/lib/api";
 import { invalidate, mutateKey, useApi } from "@/lib/useApi";
+import { hasSessionState, useSessionState } from "@/lib/sessionState";
 import type { BirthForm, Chart, ChartStyle, Profile } from "@/lib/types";
 
 const blank = (p: { ayanamsa: string; houseSystem: string; nodeType: string; chartStyle: ChartStyle }): BirthForm => ({
@@ -24,10 +25,12 @@ function KundliWorkspace() {
   const { user } = useAuth();
   const { prefs, ready } = usePrefs();
   const toast = useToast();
-  const [form, setForm] = useState<BirthForm>(() => blank(prefs));
+  // form + result persist while moving between pages (reset on refresh)
+  const restored = useRef(hasSessionState("kundli:form"));
+  const [form, setForm] = useSessionState<BirthForm>("kundli:form", () => blank(prefs));
   const { data: profiles = [] } = useApi<Profile[]>(user ? "/api/profiles" : null);
-  const [chart, setChart] = useState<Chart | null>(null);
-  const [style, setStyle] = useState<ChartStyle>(prefs.chartStyle);
+  const [chart, setChart] = useSessionState<Chart | null>("kundli:chart", null);
+  const [style, setStyle] = useSessionState<ChartStyle>("kundli:style", prefs.chartStyle);
   const [busy, setBusy] = useState(false);
   const [calc, setCalc] = useState<{ ready: boolean; dest?: string } | null>(null);
   const router = useRouter();
@@ -39,16 +42,17 @@ function KundliWorkspace() {
   useEffect(() => {
     if (prefsApplied.current || !ready) return;
     prefsApplied.current = true;
+    if (restored.current) return; // keep what the user already entered this session
     setStyle((s) => (chart ? s : prefs.chartStyle));
     setForm((f) => ({ ...f, ayanamsa: prefs.ayanamsa, house_system: prefs.houseSystem, node_type: prefs.nodeType, chart_style: prefs.chartStyle }));
-  }, [prefs, ready, chart]);
+  }, [prefs, ready, chart, setForm, setStyle]);
 
   // open ?profile=
   const pid = params.get("profile");
   useEffect(() => {
     const p = pid && profiles.find((x) => x.id === pid);
     if (p) setForm((f) => (f.profile_id === p.id ? f : { ...f, profile_id: p.id, name: p.name, birth_date: p.birth_date, birth_time: p.birth_time.slice(0, 8), birthplace: p.birthplace, latitude: String(p.latitude), longitude: String(p.longitude), timezone: p.timezone }));
-  }, [pid, profiles]);
+  }, [pid, profiles, setForm]);
 
   // open ?record=
   const rid = params.get("record");
@@ -67,7 +71,7 @@ function KundliWorkspace() {
       .catch((e) => toast(e.message, "error"))
       .finally(() => alive && setLoadingRecord(false));
     return () => { alive = false; };
-  }, [user, rid, toast]);
+  }, [user, rid, toast, setChart, setForm, setStyle]);
 
   const calculate = useCallback(async () => {
     setBusy(true);
@@ -97,7 +101,7 @@ function KundliWorkspace() {
       setCalc(null);
       toast(e instanceof Error ? e.message : "Calculation failed", "error");
     } finally { setBusy(false); }
-  }, [form, user, toast, router]);
+  }, [form, user, toast, router, setChart, setForm, setStyle]);
 
   return (
     <>
