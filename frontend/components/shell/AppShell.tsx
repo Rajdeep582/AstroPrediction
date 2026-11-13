@@ -18,6 +18,13 @@ export const NAV = [
   { href: "/settings", label: "Settings", short: "Settings", icon: Settings2, data: [] },
 ];
 const MOBILE_MAIN = ["/dashboard", "/kundli", "/reports", "/assistant"];
+// Guests: same freedom as desktop — home, free Kundli, learning; account pages only after sign-in
+const GUEST_MOBILE = [
+  { href: "/", short: "Home", icon: LayoutDashboard, data: [] as string[] },
+  { href: "/kundli", short: "Kundli", icon: Star, data: [] as string[] },
+  { href: "/learn", short: "Learn", icon: BookOpen, data: [] as string[] },
+  { href: "/assistant", short: "AI", icon: Sparkles, data: [] as string[] },
+];
 
 export function Brand({ compact = false }: { compact?: boolean }) {
   return (
@@ -36,7 +43,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const { user, signout } = useAuth();
   const toast = useToast();
   const [more, setMore] = useState(false);
-  const active = (href: string) => path === href || path.startsWith(`${href}/`);
+  const active = (href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`));
   const warm = (data: string[]) => { if (user) data.forEach(prefetch); };
 
   useEffect(() => { setMore(false); }, [path]);
@@ -84,7 +91,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       <nav className="bottom-nav" aria-label="Mobile">
-        {NAV.filter((n) => MOBILE_MAIN.includes(n.href)).map(({ href, short, icon: Icon, data }) => (
+        {(user ? NAV.filter((n) => MOBILE_MAIN.includes(n.href)) : GUEST_MOBILE).map(({ href, short, icon: Icon, data }) => (
           <Link key={href} href={href} className={active(href) ? "active" : ""} aria-current={active(href) ? "page" : undefined} onTouchStart={() => warm(data)}>
             {active(href) && <motion.span layoutId="bnav-pill" className="bnav-pill" transition={{ type: "spring", stiffness: 500, damping: 40 }} />}
             <Icon size={19} aria-hidden /><span>{short}</span>

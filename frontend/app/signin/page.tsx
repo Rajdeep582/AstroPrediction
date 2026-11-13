@@ -17,11 +17,11 @@ function Constellation() {
     <svg viewBox="0 0 100 100" className="constellation" aria-hidden>
       {LINKS.map(([a, b], i) => (
         <motion.line key={i} x1={STARS[a][0]} y1={STARS[a][1]} x2={STARS[b][0]} y2={STARS[b][1]} stroke="url(#cg)" strokeWidth=".25"
-          initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 0.8 }} transition={{ duration: 1.4, delay: 0.4 + i * 0.12 }} />
+          initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 0.8 }} transition={{ duration: 0.9, delay: 0.15 + i * 0.05 }} />
       ))}
       {STARS.map(([x, y, r], i) => (
         <motion.circle key={i} cx={x} cy={y} r={r / 3} fill="#f6e2ad"
-          initial={{ scale: 0, opacity: 0 }} animate={{ scale: [0, 1.4, 1], opacity: [0, 1, 0.9] }} transition={{ duration: 0.8, delay: i * 0.1 }}>
+          initial={{ scale: 0, opacity: 0 }} animate={{ scale: [0, 1.4, 1], opacity: [0, 1, 0.9] }} transition={{ duration: 0.5, delay: i * 0.04 }}>
           <animate attributeName="opacity" values=".55;1;.55" dur={`${2.5 + (i % 4)}s`} repeatCount="indefinite" />
         </motion.circle>
       ))}
@@ -78,7 +78,7 @@ function AuthForm() {
   );
 
   return (
-    <motion.div className="auth-panel glass" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}>
+    <motion.div className="auth-panel glass">
       <div className="seg seg-full" role="tablist" aria-label="Account">
         <button role="tab" aria-selected={mode === "signin"} onClick={() => { setMode("signin"); setError(""); }}>Sign in</button>
         <button role="tab" aria-selected={mode === "signup"} onClick={() => { setMode("signup"); setError(""); }}>Create account</button>
@@ -108,7 +108,7 @@ function AuthForm() {
 
 export default function SignInPage() {
   return (
-    <div className="auth-split">
+    <div className="auth-split page-enter">
       <section className="auth-art" aria-hidden>
         <Constellation />
         <div className="auth-art-copy">

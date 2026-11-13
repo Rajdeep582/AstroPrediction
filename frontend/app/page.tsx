@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { ArrowRight, BookOpen, CalendarDays, Gem, Hand, HeartHandshake, Orbit, ScrollText, Sparkles, Star } from "lucide-react";
 import { Brand } from "@/components/shell/AppShell";
 import ChartSVG from "@/components/chart/ChartSVG";
@@ -26,18 +25,18 @@ const DEMO = [
 export default function Landing() {
   const { user } = useAuth();
   return (
-    <div className="landing">
+    <div className="landing page-enter">
       <header className="land-nav">
         <Brand />
         <nav aria-label="Main">
           <Link href="/learn">Learn</Link>
-          <Link href="/kundli">Free Kundli</Link>
+          <Link href="/kundli" className="nav-keep">Free Kundli</Link>
           {user ? <Link href="/dashboard" className="btn btn-gold btn-sm">Dashboard</Link> : <Link href="/signin" className="btn btn-ghost btn-sm">Sign in</Link>}
         </nav>
       </header>
 
       <section className="hero">
-        <motion.div className="hero-copy" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}>
+        <div className="hero-copy">
           <p className="eyebrow">Jyotish · Sidereal · Swiss Ephemeris</p>
           <h1 className="hero-title">The sky at your first breath, <em>read with precision.</em></h1>
           <p className="lede">A complete Vedic astrology studio — birth charts, dashas, yogas, strengths, transits and matching — calculated, not guessed.</p>
@@ -48,25 +47,25 @@ export default function Landing() {
           <ul className="hero-proof" aria-label="Highlights">
             <li><b>16</b> divisional charts</li><li><b>44</b> yoga rules</li><li><b>4</b> dasha levels</li>
           </ul>
-        </motion.div>
-        <motion.div className="hero-chart" initial={{ opacity: 0, scale: 0.92, rotate: -3 }} animate={{ opacity: 1, scale: 1, rotate: 0 }} transition={{ duration: 1.1, delay: 0.2 }}>
+        </div>
+        <div className="hero-chart">
           <div className="halo" aria-hidden />
           <ChartSVG style="north" ascSign={6} bodies={DEMO} title="Sample chart" />
-        </motion.div>
+        </div>
       </section>
 
       <section className="feature-wrap" aria-labelledby="features">
         <p className="eyebrow">Everything in one observatory</p>
         <h2 id="features" className="section-title">Built like an instrument, <em>not a horoscope column.</em></h2>
         <div className="feature-grid">
-          {FEATURES.map(({ icon: Icon, title, text, href, soon }, i) => (
-            <motion.div key={title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-60px" }} transition={{ delay: (i % 4) * 0.07 }}>
+          {FEATURES.map(({ icon: Icon, title, text, href, soon }) => (
+            <div key={title}>
               {soon ? (
                 <div className="glass feature soon"><span className="feature-icon"><Icon size={20} aria-hidden /></span><h3>{title} <span className="pill pill-gold">Soon</span></h3><p>{text}</p></div>
               ) : (
                 <Link href={href} className="glass feature"><span className="feature-icon"><Icon size={20} aria-hidden /></span><h3>{title}</h3><p>{text}</p></Link>
               )}
-            </motion.div>
+            </div>
           ))}
         </div>
       </section>
