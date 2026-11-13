@@ -3,50 +3,117 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Circle, Map as LeafletMap, Marker } from "leaflet";
 import { Crosshair, Loader2, MapPin, Search, X } from "lucide-react";
+import { api } from "@/lib/api";
 
 type Place = { name: string; detail: string; lat: number; lon: number; kind?: string };
-type PhotonFeature = {
-  geometry: { coordinates: [number, number] };
-  properties: { name?: string; city?: string; county?: string; state?: string; country?: string; type?: string; osm_value?: string };
-};
 
-const DEFAULT: [number, number] = [22.5726, 88.3639];
+const DEFAULT: [number, number] = [28.6139, 77.2090];
 const cache = new Map<string, Place[]>();
 
-async function searchPlaces(q: string, signal: AbortSignal): Promise<Place[]> {
-  const key = q.toLowerCase();
-  if (cache.has(key)) return cache.get(key)!;
-  let places: Place[] = [];
+const COMMON_PLACES: Place[] = [
+  { name: "New Delhi", detail: "Delhi, India", lat: 28.6139, lon: 77.2090, kind: "city" },
+  { name: "Delhi", detail: "Delhi, India", lat: 28.6328, lon: 77.2198, kind: "city" },
+  { name: "Mumbai", detail: "Maharashtra, India", lat: 19.0760, lon: 72.8777, kind: "city" },
+  { name: "Kolkata", detail: "West Bengal, India", lat: 22.5726, lon: 88.3639, kind: "city" },
+  { name: "Bengaluru", detail: "Karnataka, India", lat: 12.9716, lon: 77.5946, kind: "city" },
+  { name: "Hyderabad", detail: "Telangana, India", lat: 17.3850, lon: 78.4867, kind: "city" },
+  { name: "Chennai", detail: "Tamil Nadu, India", lat: 13.0827, lon: 80.2707, kind: "city" },
+  { name: "Ahmedabad", detail: "Gujarat, India", lat: 23.0225, lon: 72.5714, kind: "city" },
+  { name: "Pune", detail: "Maharashtra, India", lat: 18.5204, lon: 73.8567, kind: "city" },
+  { name: "Jaipur", detail: "Rajasthan, India", lat: 26.9124, lon: 75.7873, kind: "city" },
+  { name: "Lucknow", detail: "Uttar Pradesh, India", lat: 26.8467, lon: 80.9462, kind: "city" },
+  { name: "Varanasi", detail: "Uttar Pradesh, India", lat: 25.3176, lon: 82.9739, kind: "city" },
+  { name: "Patna", detail: "Bihar, India", lat: 25.5941, lon: 85.1376, kind: "city" },
+  { name: "Surat", detail: "Gujarat, India", lat: 21.1702, lon: 72.8311, kind: "city" },
+  { name: "Kanpur", detail: "Uttar Pradesh, India", lat: 26.4499, lon: 80.3319, kind: "city" },
+  { name: "Nagpur", detail: "Maharashtra, India", lat: 21.1458, lon: 79.0882, kind: "city" },
+  { name: "Indore", detail: "Madhya Pradesh, India", lat: 22.7196, lon: 75.8577, kind: "city" },
+  { name: "Bhopal", detail: "Madhya Pradesh, India", lat: 23.2599, lon: 77.4126, kind: "city" },
+  { name: "Chandigarh", detail: "Punjab/Haryana, India", lat: 30.7333, lon: 76.7794, kind: "city" },
+  { name: "Ludhiana", detail: "Punjab, India", lat: 30.9010, lon: 75.8573, kind: "city" },
+  { name: "Amritsar", detail: "Punjab, India", lat: 31.6340, lon: 74.8723, kind: "city" },
+  { name: "Agra", detail: "Uttar Pradesh, India", lat: 27.1767, lon: 78.0081, kind: "city" },
+  { name: "Prayagraj", detail: "Uttar Pradesh, India", lat: 25.4358, lon: 81.8463, kind: "city" },
+  { name: "Dehradun", detail: "Uttarakhand, India", lat: 30.3165, lon: 78.0322, kind: "city" },
+  { name: "Haridwar", detail: "Uttarakhand, India", lat: 29.9457, lon: 78.1642, kind: "city" },
+  { name: "Ranchi", detail: "Jharkhand, India", lat: 23.3441, lon: 85.3096, kind: "city" },
+  { name: "Bhubaneswar", detail: "Odisha, India", lat: 20.2961, lon: 85.8245, kind: "city" },
+  { name: "Guwahati", detail: "Assam, India", lat: 26.1445, lon: 91.7362, kind: "city" },
+  { name: "Visakhapatnam", detail: "Andhra Pradesh, India", lat: 17.6868, lon: 83.2185, kind: "city" },
+  { name: "Vijayawada", detail: "Andhra Pradesh, India", lat: 16.5062, lon: 80.6480, kind: "city" },
+  { name: "Coimbatore", detail: "Tamil Nadu, India", lat: 11.0168, lon: 76.9558, kind: "city" },
+  { name: "Madurai", detail: "Tamil Nadu, India", lat: 9.9252, lon: 78.1198, kind: "city" },
+  { name: "Kochi", detail: "Kerala, India", lat: 9.9312, lon: 76.2673, kind: "city" },
+  { name: "Thiruvananthapuram", detail: "Kerala, India", lat: 8.5241, lon: 76.9366, kind: "city" },
+  { name: "Noida", detail: "Uttar Pradesh, India", lat: 28.5355, lon: 77.3910, kind: "city" },
+  { name: "Gurugram", detail: "Haryana, India", lat: 28.4595, lon: 77.0266, kind: "city" },
+  { name: "Faridabad", detail: "Haryana, India", lat: 28.4089, lon: 77.3178, kind: "city" },
+  { name: "Ghaziabad", detail: "Uttar Pradesh, India", lat: 28.6692, lon: 77.4538, kind: "city" },
+  { name: "Vadodara", detail: "Gujarat, India", lat: 22.3072, lon: 73.1812, kind: "city" },
+  { name: "Rajkot", detail: "Gujarat, India", lat: 22.3039, lon: 70.8022, kind: "city" },
+  { name: "Nashik", detail: "Maharashtra, India", lat: 19.9975, lon: 73.7898, kind: "city" },
+  { name: "Thane", detail: "Maharashtra, India", lat: 19.2183, lon: 72.9781, kind: "city" },
+  { name: "Jodhpur", detail: "Rajasthan, India", lat: 26.2389, lon: 73.0243, kind: "city" },
+  { name: "Udaipur", detail: "Rajasthan, India", lat: 24.5854, lon: 73.7125, kind: "city" },
+  { name: "Raipur", detail: "Chhattisgarh, India", lat: 21.2514, lon: 81.6296, kind: "city" },
+  { name: "Srinagar", detail: "Jammu & Kashmir, India", lat: 34.0837, lon: 74.7973, kind: "city" },
+  { name: "Shimla", detail: "Himachal Pradesh, India", lat: 31.1048, lon: 77.1734, kind: "city" },
+  { name: "London", detail: "Greater London, United Kingdom", lat: 51.5074, lon: -0.1278, kind: "city" },
+  { name: "New York", detail: "New York, United States", lat: 40.7128, lon: -74.0060, kind: "city" },
+  { name: "San Francisco", detail: "California, United States", lat: 37.7749, lon: -122.4194, kind: "city" },
+  { name: "Los Angeles", detail: "California, United States", lat: 34.0522, lon: -118.2437, kind: "city" },
+  { name: "Chicago", detail: "Illinois, United States", lat: 41.8781, lon: -87.6298, kind: "city" },
+  { name: "Dallas", detail: "Texas, United States", lat: 32.7767, lon: -96.7970, kind: "city" },
+  { name: "Toronto", detail: "Ontario, Canada", lat: 43.6532, lon: -79.3832, kind: "city" },
+  { name: "Vancouver", detail: "British Columbia, Canada", lat: 49.2827, lon: -123.1207, kind: "city" },
+  { name: "Dubai", detail: "United Arab Emirates", lat: 25.2048, lon: 55.2708, kind: "city" },
+  { name: "Singapore", detail: "Singapore", lat: 1.3521, lon: 103.8198, kind: "city" },
+  { name: "Sydney", detail: "New South Wales, Australia", lat: -33.8688, lon: 151.2093, kind: "city" },
+  { name: "Melbourne", detail: "Victoria, Australia", lat: -37.8136, lon: 144.9631, kind: "city" },
+];
+
+async function searchPlaces(q: string, signal?: AbortSignal): Promise<Place[]> {
+  const norm = q.trim().toLowerCase();
+  if (cache.has(norm)) return cache.get(norm)!;
+
+  // 1. Instant local matches for common places
+  const localMatches = COMMON_PLACES.filter(
+    (p) => p.name.toLowerCase().includes(norm) || p.detail.toLowerCase().includes(norm)
+  );
+
+  // 2. Query backend geocoding proxy
+  let remoteMatches: Place[] = [];
   try {
-    const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=10&lang=en`, { signal });
-    if (!r.ok) throw new Error("photon");
-    const data = (await r.json()) as { features: PhotonFeature[] };
-    places = data.features.map((f) => {
-      const p = f.properties;
-      const name = p.name || p.city || p.county || p.state || "Unnamed place";
-      const detail = [p.city !== name ? p.city : "", p.state, p.country].filter(Boolean).join(", ");
-      return { name, detail, lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0], kind: p.osm_value || p.type };
+    const res = await api<{ places: Place[] }>(`/api/location/search?q=${encodeURIComponent(q)}`, {
+      signal,
+      retries: 0,
     });
-  } catch (e) {
-    if ((e as Error).name === "AbortError") throw e;
-    const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=6&q=${encodeURIComponent(q)}`, { signal, headers: { "Accept-Language": "en" } });
-    const data = (await r.json()) as { lat: string; lon: string; display_name: string; type?: string }[];
-    places = data.map((d) => {
-      const [name, ...rest] = d.display_name.split(", ");
-      return { name, detail: rest.join(", "), lat: +d.lat, lon: +d.lon, kind: d.type };
-    });
+    if (res?.places && Array.isArray(res.places)) {
+      remoteMatches = res.places;
+    }
+  } catch {
+    // If backend proxy fails or request aborted, continue with local matches
   }
-  const seen = new Set<string>();
-  places = places.filter((p) => { const k = `${p.name}|${p.detail}`; if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 6);
-  cache.set(key, places);
-  return places;
+
+  // Combine and deduplicate
+  const combined = [...remoteMatches];
+  for (const loc of localMatches) {
+    if (!combined.some((c) => Math.abs(c.lat - loc.lat) < 0.05 && Math.abs(c.lon - loc.lon) < 0.05)) {
+      combined.push(loc);
+    }
+  }
+
+  const results = combined.slice(0, 8);
+  if (results.length > 0) {
+    cache.set(norm, results);
+  }
+  return results;
 }
 
 async function reverseName(lat: number, lon: number): Promise<string | null> {
   try {
-    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14`, { headers: { "Accept-Language": "en" } });
-    const d = (await r.json()) as { display_name?: string };
-    return d.display_name ?? null;
+    const res = await api<{ name: string | null }>(`/api/location/reverse?lat=${lat}&lon=${lon}`, { retries: 0 });
+    return res.name ?? null;
   } catch {
     return null;
   }
@@ -69,6 +136,7 @@ export default function LocationPicker({
   const marker = useRef<Marker | null>(null);
   const ring = useRef<Circle | null>(null);
   const L = useRef<typeof import("leaflet") | null>(null);
+  const resizeObs = useRef<ResizeObserver | null>(null);
   const props = useRef({ onLocation, onName, onCoords });
   props.current = { onLocation, onName, onCoords };
 
@@ -97,7 +165,10 @@ export default function LocationPicker({
         if (n) { committed.current = n; props.current.onName(n); }
       });
     } else marker.current.setLatLng([lat, lon]);
-    m.flyTo([lat, lon], zoom ?? Math.max(m.getZoom(), 12), { duration: 1.6, easeLinearity: 0.2 });
+    const z = zoom ?? Math.max(m.getZoom(), 12);
+    // long fly only for far jumps; short hops just pan (feels instant on phones)
+    if (m.getCenter().distanceTo([lat, lon]) > 50000) m.flyTo([lat, lon], z, { duration: 1.1, easeLinearity: 0.25 });
+    else m.setView([lat, lon], z, { animate: true });
   }, []);
 
   // init map once
@@ -109,11 +180,16 @@ export default function LocationPicker({
       L.current = Lf;
       const lat = parseFloat(latitude), lon = parseFloat(longitude);
       const has = Number.isFinite(lat) && Number.isFinite(lon);
-      const m = Lf.map(mapEl.current, { center: has ? [lat, lon] : DEFAULT, zoom: has ? 11 : 4, zoomControl: false, attributionControl: true, zoomSnap: 0.25, wheelPxPerZoomLevel: 90 });
-      Lf.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      const m = Lf.map(mapEl.current, { center: has ? [lat, lon] : DEFAULT, zoom: has ? 11 : 4, zoomControl: false, attributionControl: true, zoomSnap: 0.5, wheelPxPerZoomLevel: 90, tapTolerance: 15, bounceAtZoomLimits: false });
+      // Esri World Street Map: Google-style default road map with English labels, no API key
+      Lf.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
         className: "astro-tiles",
         maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> ',
+        maxNativeZoom: 18,
+        keepBuffer: 4,
+        updateWhenZooming: false,
+        crossOrigin: true,
+        attribution: "Tiles &copy; Esri",
       }).addTo(m);
       Lf.control.zoom({ position: "bottomright" }).addTo(m);
       m.attributionControl.setPrefix(false);
@@ -126,8 +202,13 @@ export default function LocationPicker({
       });
       map.current = m;
       if (has) placePin(lat, lon, 11);
+      // Leaflet must be told when its box changes size (rotation, keyboard, layout shifts), else tiles go grey / half-loaded
+      const ro = new ResizeObserver(() => m.invalidateSize({ pan: false }));
+      ro.observe(mapEl.current);
+      resizeObs.current = ro;
+      requestAnimationFrame(() => m.invalidateSize());
     })();
-    return () => { alive = false; map.current?.remove(); map.current = null; marker.current = null; ring.current = null; };
+    return () => { alive = false; resizeObs.current?.disconnect(); map.current?.remove(); map.current = null; marker.current = null; ring.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -139,28 +220,46 @@ export default function LocationPicker({
     if (!cur || Math.abs(cur.lat - lat) > 1e-5 || Math.abs(cur.lng - lon) > 1e-5) placePin(lat, lon);
   }, [latitude, longitude, placePin]);
 
-  // debounced as-you-type search
+  // debounced as-you-type search with instant local results
   useEffect(() => {
     const q = query.trim();
     if (q.length < 2 || query === committed.current) { setResults([]); return; }
+
+    // Instant local matches so there's zero buffering
+    const local = COMMON_PLACES.filter(
+      (p) => p.name.toLowerCase().includes(q.toLowerCase()) || p.detail.toLowerCase().includes(q.toLowerCase())
+    );
+    if (local.length > 0) {
+      setResults(local.slice(0, 6));
+      setOpen(true);
+    }
+
     const ctl = new AbortController();
     const t = setTimeout(async () => {
       setBusy(true);
       try {
         const r = await searchPlaces(q, ctl.signal);
-        setResults(r); setActive(0); setOpen(true);
-        setError(r.length ? "" : "No places found — try a nearby town.");
+        if (r.length > 0) {
+          setResults(r);
+          setActive(0);
+          setOpen(true);
+          setError("");
+        } else if (local.length === 0) {
+          setError("No places found — try a nearby town.");
+        }
       } catch (e) {
-        if ((e as Error).name !== "AbortError") setError("Place search is unavailable right now.");
+        if ((e as Error).name !== "AbortError" && local.length === 0) {
+          setError("Place search is unavailable right now.");
+        }
       } finally { setBusy(false); }
-    }, 280);
+    }, 320);
     return () => { clearTimeout(t); ctl.abort(); };
   }, [query]);
 
   useEffect(() => {
     const close = (e: MouseEvent) => { if (!boxRef.current?.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
   }, []);
 
   function choose(p: Place) {
@@ -208,10 +307,11 @@ export default function LocationPicker({
         <Search size={17} className="loc-icon" />
         <input
           value={query}
-          onChange={(e) => { setQuery(e.target.value); onName(e.target.value); }}
+          onChange={(e) => { setQuery(e.target.value); onName(e.target.value); if (error) setError(""); }}
           onFocus={() => results.length && setOpen(true)}
           onKeyDown={onKey}
-          placeholder="Search birth place — city, town or village"
+          placeholder="Search birth place"
+          inputMode="search" enterKeyHint="search" spellCheck={false}
           autoComplete="off" role="combobox" aria-expanded={open} aria-controls="loc-list" aria-label="Birth place"
         />
         {busy ? <Loader2 size={16} className="loc-spin" /> : query && (

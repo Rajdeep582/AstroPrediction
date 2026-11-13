@@ -25,3 +25,15 @@
 .an-card-head h3 { font-size: 16.5px; }
 .an .an-lead { font-size: 15px; line-height: 1.65; max-width: 70ch; color: #b9b2cc; }
 @media (max-width: 640px) { .an .rd, .an .rd-more li { font-size: 15.5px; } }
+@media (max-width: 380px) {
+  .an .rd, .an .rd-more li { font-size: 14px; line-height: 1.6; }
+  .an-card { padding: 14px 10px 12px; }
+}
+
+/* "What this means for you" block */
+.meaning { margin-top: 12px; padding: 12px 14px; border-radius: 12px; border-left: 3px solid #e2b866;
+  background: linear-gradient(135deg, rgba(233,199,125,.08), rgba(111,82,224,.07)); }
+.meaning-h { margin: 0 0 4px !important; font: 600 11px/1.2 var(--sans) !important; letter-spacing: .14em; text-transform: uppercase; color: var(--gold) !important; }
+.meaning p { margin: 6px 0 0; font-size: 14.5px; line-height: 1.7; color: #efe8d8; }
+.meaning p.small { font-size: 13px; color: #c9c2d8; }
+@media (max-width: 380px) { .meaning { padding: 10px 11px; } .meaning p { font-size: 14px; } }

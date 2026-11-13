@@ -45,7 +45,7 @@ process.on("SIGINT", () => stop()); process.on("SIGTERM", () => stop());
 
 function start(svc, cmd, args, cwd) {
   const shell = win && cmd === "npm";
-  const p = spawn(shell ? [cmd, ...args].join(" ") : cmd, shell ? [] : args, { cwd, shell, stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, PYTHONUNBUFFERED: "1", FORCE_COLOR: "1" } });
+  const p = spawn(shell ? [cmd, ...args].join(" ") : cmd, shell ? [] : args, { cwd, shell, detached: win, windowsHide: true, stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, PORT: String(svc.port), API_PORT: String(API.port), PYTHONUNBUFFERED: "1", FORCE_COLOR: "1" } });
   const out = (d) => process.stdout.write(d.toString().replace(/^(?=.)/gm, tag(svc)));
   p.stdout.on("data", out); p.stderr.on("data", out);
   p.on("exit", (code) => { if (!stopping) { console.log(`${tag(svc)}exited with code ${code}`); stop(code ?? 1); } });

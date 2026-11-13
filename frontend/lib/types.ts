@@ -33,7 +33,7 @@ export type Dosha = { name: string; present: boolean; severity: string; score: n
 export type ShadbalaRow = { sthana: number; dig: number; kala: number; chesta: number; naisargika: number; drik: number; total_virupas: number; rupas: number; required: number; ratio: number; strong: boolean };
 export type HouseAnalysis = { house: number; name: string; significations: string; sign: string; lord: string; lord_house: number; lord_dignity: string; occupants: string[]; aspects: string[]; sav: number; score: number; interpretation: string };
 export type LifeArea = { score: number; houses: number[]; karakas: string[]; summary: string; outlook: string };
-export type Remedy = { planet: string; reasons: string[]; gemstone: string | null; gem_note: string; metal: string; finger: string; mantra: string; mantra_count: number; day: string; charity: string; ritual: string; deity: string };
+export type Remedy = { planet: string; reasons: string[]; gemstone: string | null; gem_note: string; metal: string; finger: string; mantra: string; mantra_count: number; day: string; charity: string; ritual: string; deity: string; purpose?: string };
 export type TransitPlanet = { name: string; sign: string; degree: string; nakshatra: string; retrograde: boolean; house_from_moon: number; house_from_lagna: number; favourable: boolean; effect: string; conjunct_natal?: string[] };
 export type Transits = { date: string; reference_moon_sign: string; planets: TransitPlanet[]; score: number };
 
@@ -75,12 +75,12 @@ export const VARGA_LIST = ["D1", "D2", "D3", "D4", "D7", "D9", "D10", "D12", "D1
 export const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
 export type SignProfile = { sign: string; lord: string; element: string; modality: string; nature: string; strengths: string; challenges: string; lucky: { gemstone: string; day: string; colour: string; number: string } };
-export type PlanetReading = { planet: string; house: number; sign: string; nakshatra: string; pada: number; dignity: string; retrograde: boolean; combust: boolean; functional: { role: string; rules: number[]; label: string }; score: number; tone: string; conditions: string[]; interpretation: string };
+export type PlanetReading = { meaning?: { life: string; caution: string; dignity: string; verdict: string }; planet: string; house: number; sign: string; nakshatra: string; pada: number; dignity: string; retrograde: boolean; combust: boolean; functional: { role: string; rules: number[]; label: string }; score: number; tone: string; conditions: string[]; interpretation: string };
 export type LifeEffect = { area: string; tone: string; via: string[]; text: string };
 export type PeriodLite = { lord: string; start: string; end: string; current: boolean; score: number; tone: string };
 export type AntardashaReading = { lord: string; start: string; end: string; current: boolean; score: number; tone: string; focus: string[]; summary: string;
   more?: { relationship: string; effects: LifeEffect[]; pratyantar: PeriodLite[]; advice: string } };
-export type DashaReading = { lord: string; start: string; end: string; years: number; age_from: number; age_to: number; current: boolean; past: boolean; score: number; tone: string; functional: string; activates: number[]; summary: string; highlights: string[]; cautions: string[]; antardashas: AntardashaReading[];
+export type DashaReading = { lord: string; start: string; end: string; years: number; age_from: number; age_to: number; current: boolean; past: boolean; score: number; tone: string; functional: string; activates: number[]; summary: string; highlights: string[]; cautions: string[]; antardashas: AntardashaReading[]; plain?: string;
   more?: { effects: LifeEffect[]; remedy: { mantra: string; count: number; day: string; charity: string; practice: string; deity: string };
     houses: { house: number; theme: string; why: string }[]; best_sub: string | null; hard_sub: string | null } };
 export type Analysis = {
@@ -95,5 +95,8 @@ export type Analysis = {
   planets: PlanetReading[];
   dashas: DashaReading[];
   lord_profiles?: Record<string, { label: string; value: string }[]>;
+  house_meanings?: Record<string, string>;
+  yoga_meanings?: Record<string, string>;
+  dosha_meanings?: Record<string, { what: string; advice: string; status: string }>;
   methodology: string[];
 };

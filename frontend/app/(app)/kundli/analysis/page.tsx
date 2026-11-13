@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { AlertTriangle, ArrowLeft, Calendar, ChevronDown, Clock, Compass, MapPin, Sparkles } from "lucide-react";
 import KundliResult from "@/components/kundli/KundliResult";
-import { Details, Hl, MoreList, ReadMore } from "@/components/kundli/Readable";
+import { Details, Hl, Meaning, MoreList, ReadMore } from "@/components/kundli/Readable";
 import { Card, Empty, ScoreRing, SkeletonBlock } from "@/components/ui";
 import { useAuth, useToast } from "@/components/providers";
 import { useScrollTo } from "@/components/SmoothScroll";
@@ -91,6 +91,7 @@ function DashaTimeline({ dashas, profiles }: { dashas: DashaReading[]; profiles?
         </div>
         <Score value={d.score} label="Period strength" />
         <ReadMore text={d.summary} keep={2} />
+        {d.plain && <Meaning><p>{d.plain}</p></Meaning>}
         <p className="small"><b style={{ color: "var(--gold-hi)" }}>Role for this lagna:</b> {d.functional}</p>
         <div className="an-grid two" style={{ marginTop: 12 }}>
           <div><h3 className="small">Supportive themes</h3><ul className="bullets t-excellent">{d.highlights.map((h) => <li key={h}>{h}</li>)}</ul></div>
@@ -285,6 +286,13 @@ function AnalysisView({ chart }: { chart: Rec }) {
                 <Score value={p.score} />
                 <p className="role-line">{p.functional.label.split(" — ")[0]}</p>
                 <ReadMore text={p.interpretation} keep={2} />
+                {p.meaning && (
+                  <Meaning>
+                    <p><b className="good-text">In your life:</b> {p.meaning.life}</p>
+                    <p><b className="warn-text">Be mindful of:</b> {p.meaning.caution}</p>
+                    <p className="small">{p.meaning.dignity} {p.meaning.verdict}</p>
+                  </Meaning>
+                )}
                 {(p.conditions.length > 0 || p.functional.label.includes(" — ")) && (
                   <Details label="Condition details">
                     <ul className="rd-more">
@@ -308,6 +316,7 @@ function AnalysisView({ chart }: { chart: Rec }) {
                 <Score value={h.score} />
                 <p className="role-line">{h.significations}</p>
                 <ReadMore text={h.interpretation} keep={2} />
+                {a.house_meanings?.[String(h.house)] && <Meaning><p>{a.house_meanings[String(h.house)]}</p></Meaning>}
               </div>
             )} />
         </Section>
@@ -318,6 +327,7 @@ function AnalysisView({ chart }: { chart: Rec }) {
               <div key={y.name} className="an-card t-excellent">
                 <div className="an-card-head"><h3><Sparkles size={14} style={{ color: "var(--gold)" }} /> {y.name}</h3><span className="small muted">{y.category}</span></div>
                 <ReadMore text={y.description} keep={1} />
+                {a.yoga_meanings?.[y.name] && <Meaning><p>{a.yoga_meanings[y.name]}</p></Meaning>}
               </div>
             )} />
           <h3 className="sub-h">Doshas</h3>
@@ -326,6 +336,13 @@ function AnalysisView({ chart }: { chart: Rec }) {
               <div key={d.name} className={`an-card t-${d.present ? (d.severity === "high" ? "challenging" : "mixed") : "excellent"}`}>
                 <div className="an-card-head"><h3>{d.present ? <AlertTriangle size={14} className="warn-text" /> : "✓"} {d.name}</h3><ToneTag tone={d.present ? d.severity : "absent"} /></div>
                 <ReadMore text={d.details} keep={1} />
+                {a.dosha_meanings?.[d.name] && (
+                  <Meaning>
+                    <p><b>{a.dosha_meanings[d.name].status}</b></p>
+                    {d.present && a.dosha_meanings[d.name].what && <p>{a.dosha_meanings[d.name].what}</p>}
+                    {d.present && a.dosha_meanings[d.name].advice && <p><b className="good-text">What helps:</b> {a.dosha_meanings[d.name].advice}</p>}
+                  </Meaning>
+                )}
                 {(d.cancellations.length > 0 || d.remedies.length > 0) && (
                   <Details>
                     <ul className="rd-more">
@@ -345,6 +362,7 @@ function AnalysisView({ chart }: { chart: Rec }) {
                 <div key={r.planet} className="an-card">
                   <div className="an-card-head"><h3>{PLANET_GLYPH[r.planet]} {r.planet}</h3><span className="an-chip">{r.day}</span></div>
                   <p className="role-line">Needs support: {r.reasons.join(", ")}</p>
+                  {r.purpose && <p className="rd muted" style={{ fontSize: "13px", margin: "4px 0 8px" }}><b>Purpose:</b> {r.purpose}</p>}
                   <p className="rd"><b>Mantra:</b> <span className="mantra">{r.mantra}</span> — {r.mantra_count.toLocaleString()} times.</p>
                   <Details>
                     <ul className="rd-more">

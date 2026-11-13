@@ -20,7 +20,14 @@ export const metadata: Metadata = {
   openGraph: { type: "website", siteName: "Jyotish Studio", title: "Jyotish Studio", description: "Premium Vedic astrology workspace." },
 };
 
-export const viewport: Viewport = { themeColor: "#07080f", colorScheme: "dark" };
+export const viewport: Viewport = {
+  themeColor: "#07080f",
+  colorScheme: "dark",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
+};
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

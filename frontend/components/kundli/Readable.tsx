@@ -60,3 +60,13 @@ export function Details({ children, label = "Know more" }: { children: ReactNode
     </>
   );
 }
+
+/** Plain-language deduction shown under the technical facts. */
+export function Meaning({ children, title = "What this means for you" }: { children: ReactNode; title?: string }) {
+  return (
+    <div className="meaning">
+      <p className="meaning-h">{title}</p>
+      {children}
+    </div>
+  );
+}

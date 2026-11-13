@@ -39,3 +39,12 @@ a, button, [role="tab"], .nav-item { touch-action: manipulation; -webkit-tap-hig
 @keyframes route-in { from { opacity: .4; } }
 /* Shadows on large cards are expensive to repaint when they change; keep them static. */
 .an-card, .glass { transition: border-color .2s, box-shadow .2s; }
+
+/* ───────── Mobile polish ───────── */
+@media (max-width: 768px) {
+  input, select, textarea { font-size: 16px !important; } /* stops iOS zoom-on-focus everywhere */
+  .auth-panel { background: linear-gradient(160deg, rgba(30,22,66,.94), rgba(12,10,30,.97)) !important; }
+  .auth-panel .btn, .loc-locate, .more-btn, .km-btn { min-height: 44px; } /* comfortable tap targets */
+  .bottom-nav { padding-bottom: max(6px, env(safe-area-inset-bottom)); }
+}
+@supports (height: 100dvh) { .auth-split, .center-page { min-height: 100dvh; } }

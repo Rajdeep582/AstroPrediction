@@ -278,7 +278,7 @@ async def signup(credentials: Credentials, request: Request, response: Response)
         raise HTTPException(
             status_code=409, detail="That username is already in use."
         ) from exc
-    await issue_session(db, user_id, request, response, cached_user=user)
+    await issue_session(db, user_id, request, response, cached_user={k: v for k, v in user.items() if k not in ("password_hash", "_id")})
     return {"user": public_user(user)}
 
 
@@ -296,7 +296,7 @@ async def signin(credentials: Credentials, request: Request, response: Response)
         raise HTTPException(
             status_code=401, detail="Username or password is incorrect."
         )
-    await issue_session(db, user["id"], request, response, cached_user=user)
+    await issue_session(db, user["id"], request, response, cached_user={k: v for k, v in user.items() if k not in ("password_hash", "_id")})
     return {"user": public_user(user)}
 
 
@@ -393,6 +393,11 @@ async def create_kundli(birth: BirthInput, user: dict = Depends(authenticated_us
     }
 
     record_id = str(uuid4())
+    # Store lean documents: the analysis text is regenerated on read (~30 ms), and the positions
+    # collection only needs the raw placements. Halves write size and speeds up reads.
+    stored_calc = {k: v for k, v in calculation.items() if k != "analysis"}
+    positions_only = {k: calculation[k] for k in ("planets", "ascendant", "settings", "ayanamsa_degrees", "engine") if k in calculation}
+
     async def persist_chart(session):
         existing = await db.profiles.find_one(
             {"id": profile_id, "owner_id": user["id"]}, {"_id": 0}, session=session
@@ -413,7 +418,7 @@ async def create_kundli(birth: BirthInput, user: dict = Depends(authenticated_us
             "profile_id": profile_id,
             "created_at": now,
             "input": crypto.encrypt_value(birth.model_dump(mode="json")),
-            "calculation": calculation,
+            "calculation": stored_calc,
         }
         await db.kundli_records.insert_one(record, session=session)
         await db.planetary_calculations.insert_one(
@@ -423,7 +428,7 @@ async def create_kundli(birth: BirthInput, user: dict = Depends(authenticated_us
                 "profile_id": profile_id,
                 "kundli_record_id": record_id,
                 "created_at": now,
-                "calculation": calculation,
+                "calculation": positions_only,
             },
             session=session,
         )
@@ -491,7 +496,7 @@ async def kundli_record(record_id: str, user: dict = Depends(authenticated_user)
         raise HTTPException(status_code=404, detail="Saved reading not found.")
     profile = await db.profiles.find_one({"id": record.get("profile_id"), "owner_id": user["id"]}, {"_id": 0, "owner_id": 0})
     calc = record.get("calculation") or {}
-    if calc.get("dasha") and "analysis" not in calc:  # older records: derive analysis on read
+    if calc.get("dasha") and (calc.get("analysis") or {}).get("version", 0) < 2:  # older records: (re)derive analysis on read
         try:
             from .analysis import build_analysis
             calc["analysis"] = build_analysis(calc)

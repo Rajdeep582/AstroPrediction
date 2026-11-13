@@ -139,3 +139,99 @@ async def timezone_at(lat: float = Query(..., ge=-90, le=90), lon: float = Query
     except ImportError as exc:
         raise HTTPException(status_code=503, detail="timezonefinder is not installed on the backend.") from exc
     return {"timezone": tz, "latitude": lat, "longitude": lon}
+
+
+_geo_cache: dict[str, list[dict]] = {}
+_reverse_cache: dict[str, str | None] = {}
+
+
+@router.get("/location/search")
+async def location_search(q: str = Query(..., min_length=2)):
+    """Fast geocoding search using Open-Meteo with OpenStreetMap Nominatim fallback."""
+    q_norm = q.strip().lower()
+    if q_norm in _geo_cache:
+        return {"places": _geo_cache[q_norm]}
+
+    def _fetch():
+        import urllib.parse
+        import requests
+        headers = {"User-Agent": "JyotishStudioApp/1.0 (admin@jyotish.app)", "Accept-Language": "en"}
+        out = []
+
+        # 1. Open-Meteo Geocoding API: ultra-fast, worldwide coverage
+        try:
+            url = f"https://geocoding-api.open-meteo.com/v1/search?name={urllib.parse.quote(q)}&count=8&language=en&format=json"
+            r = requests.get(url, headers=headers, timeout=3)
+            if r.status_code == 200:
+                data = r.json().get("results", [])
+                for d in data:
+                    name = d.get("name", "Unknown place")
+                    details = [d.get("admin2"), d.get("admin1"), d.get("country")]
+                    detail = ", ".join(filter(None, details))
+                    out.append({
+                        "name": name,
+                        "detail": detail,
+                        "lat": float(d["latitude"]),
+                        "lon": float(d["longitude"]),
+                        "kind": d.get("feature_code", "city"),
+                    })
+                if out:
+                    return out
+        except Exception:
+            pass
+
+        # 2. Fallback to OpenStreetMap Nominatim
+        try:
+            url = f"https://nominatim.openstreetmap.org/search?format=json&limit=8&q={urllib.parse.quote(q)}"
+            r = requests.get(url, headers=headers, timeout=3.5)
+            if r.status_code == 200:
+                for d in r.json():
+                    parts = d.get("display_name", "").split(", ")
+                    name = parts[0] if parts else d.get("name", "Unknown place")
+                    detail = ", ".join(parts[1:]) if len(parts) > 1 else ""
+                    out.append({
+                        "name": name,
+                        "detail": detail,
+                        "lat": float(d["lat"]),
+                        "lon": float(d["lon"]),
+                        "kind": d.get("type", "place"),
+                    })
+        except Exception:
+            pass
+
+        return out
+
+    places = await run_in_threadpool(_fetch)
+    if places:
+        _geo_cache[q_norm] = places
+        if len(_geo_cache) > 2000:
+            _geo_cache.clear()
+    return {"places": places}
+
+
+@router.get("/location/reverse")
+async def location_reverse(lat: float = Query(..., ge=-90, le=90), lon: float = Query(..., ge=-180, le=180)):
+    """Reverse geocode coordinates to location display name."""
+    key = f"{lat:.4f},{lon:.4f}"
+    if key in _reverse_cache:
+        return {"name": _reverse_cache[key]}
+
+    def _fetch():
+        import requests
+        headers = {"User-Agent": "JyotishStudioApp/1.0 (admin@jyotish.app)", "Accept-Language": "en"}
+        url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}&zoom=14"
+        try:
+            r = requests.get(url, headers=headers, timeout=4)
+            if r.status_code == 200:
+                d = r.json()
+                return d.get("display_name")
+        except Exception:
+            pass
+        return None
+
+    name = await run_in_threadpool(_fetch)
+    _reverse_cache[key] = name
+    if len(_reverse_cache) > 2000:
+        _reverse_cache.clear()
+    return {"name": name}
+

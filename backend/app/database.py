@@ -48,11 +48,15 @@ async def connect_database():
 
 async def ensure_connected(min_interval: float = 15.0) -> bool:
     """Lazily (re)connect; throttled so a down cluster doesn't stall every request."""
+    global connecting
     if db is not None:
         return True
+    if connecting or _lock.locked():
+        # a connection attempt is in flight (e.g. right after a cold start): wait for it instead of failing
+        async with _lock:
+            return db is not None
     if time.monotonic() - _last_attempt < min_interval:
         return False
-    global connecting
     async with _lock:
         if db is not None:
             return True

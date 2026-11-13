@@ -382,30 +382,68 @@ def detect_yogas(c: dict) -> list[dict]:
 
     # Pancha Mahapurusha
     for pl, nm in (("Mars", "Ruchaka"), ("Mercury", "Bhadra"), ("Jupiter", "Hamsa"), ("Venus", "Malavya"), ("Saturn", "Shasha")):
-        add(f"{nm} Yoga", "Pancha Mahapurusha", h[pl] in KENDRA and dig[pl] in ("own", "exalted", "moolatrikona"), f"{pl} in own/exalted sign in a kendra: eminence through {pl}'s significations.", "strong")
-    add("Gajakesari Yoga", "Lunar", from_moon["Jupiter"] in KENDRA, "Jupiter in a kendra from Moon: wisdom, reputation, lasting prosperity.", "strong")
-    add("Budhaditya Yoga", "Solar", conj("Sun", "Mercury") and not P(c, "Mercury")["combust"], "Sun and Mercury together (Mercury not combust): intelligence, communication skill.")
-    add("Chandra-Mangala Yoga", "Wealth", conj("Moon", "Mars") or (from_moon["Mars"] == 7), "Moon with/opposite Mars: earning power, enterprise.")
-    add("Guru-Mangala Yoga", "Wealth", mutual_aspect_or_conj("Jupiter", "Mars"), "Jupiter and Mars linked: righteous action, technical/administrative skill.")
+        mp_desc = {
+            "Ruchaka": f"Mars in own or exalted sign in a kendra (house {h[pl]}): Ruchaka Yoga bestows physical vigor, courage, administrative boldness, and natural leadership. You possess the drive to overcome obstacles and protect those under your care. In daily life, this energy favors engineering, executive management, athletics, and enterprise; channeling high vitality through structured physical discipline prevents hasty impatience.",
+            "Bhadra": f"Mercury in own or exalted sign in a kendra (house {h[pl]}): Bhadra Yoga confers exceptional intellect, eloquent speech, keen analytical ability, and commercial mastery. You absorb information rapidly, communicate with persuasive clarity, and excel in technology, writing, advisory work, or trade. Maintaining regular rest balances your active mental energy.",
+            "Hamsa": f"Jupiter in own or exalted sign in a kendra (house {h[pl]}): Hamsa Yoga indicates high moral stature, philosophical wisdom, benevolent leadership, and lasting public respect. Others naturally seek your wise counsel, and your ethical values inspire confidence. It brings prosperity, harmonious relationships, and spiritual insight throughout your life.",
+            "Malavya": f"Venus in own or exalted sign in a kendra (house {h[pl]}): Malavya Yoga endows you with personal charm, artistic sensibility, material comfort, and aesthetic refinement. You appreciate beauty, fine conveyances, harmonious living spaces, and affectionate partnerships. Channeling creative passion into meaningful design or gracious hospitality magnifies its blessings.",
+            "Shasha": f"Saturn in own or exalted sign in a kendra (house {h[pl]}): Shasha Yoga creates enduring authority, methodical perseverance, structural discipline, and command over large operations. Your achievements are earned through dedicated, reliable service, often flowering into substantial influence in mature adulthood. Balancing serious focus with moments of leisure keeps your spirit bright.",
+        }
+        add(f"{nm} Yoga", "Pancha Mahapurusha", h[pl] in KENDRA and dig[pl] in ("own", "exalted", "moolatrikona"), mp_desc[nm], "strong")
+
+    add("Gajakesari Yoga", "Lunar", from_moon["Jupiter"] in KENDRA,
+        f"Jupiter in a kendra (house {from_moon['Jupiter']}) from Moon: Gajakesari Yoga is one of Vedic astrology's most celebrated blessings for wisdom, enduring reputation, and lasting prosperity. It gives a noble disposition, ethical clarity, and resilient composure when facing life's tests. In professional and civic life, your judgment earns genuine respect. Continued learning and humility keep this combination radiant.", "strong")
+
+    add("Budhaditya Yoga", "Solar", conj("Sun", "Mercury") and not P(c, "Mercury")["combust"],
+        f"Sun and Mercury together in house {h['Sun']} (Mercury not combust): Budhaditya Yoga merges solar vitality and authority with Mercurial intellect, conferring sharp intelligence, communicative mastery, and administrative skill. You grasp complex subjects quickly and express ideas with poise, excelling in advisory, analytical, or managerial pursuits.")
+
+    add("Chandra-Mangala Yoga", "Wealth", conj("Moon", "Mars") or (from_moon["Mars"] == 7),
+        f"Moon conjunct or opposite Mars (houses {h['Moon']} and {h['Mars']}): Chandra-Mangala Yoga is a classic wealth-generating combination signifying commercial acumen, financial dynamism, and persistent ambition. You possess the determination to turn innovative ideas into tangible gains. Directing this passionate energy with patience in relationships ensures lasting success.")
+
+    add("Guru-Mangala Yoga", "Wealth", mutual_aspect_or_conj("Jupiter", "Mars"),
+        "Jupiter and Mars mutually linked by aspect or conjunction: Guru-Mangala Yoga unites Mars's courage with Jupiter's ethical wisdom. It confers purposeful action, administrative talent, and success in technical, legal, or managerial leadership. You stand firmly by your principles and inspire confidence in peers.")
+
     second = [p for p in real7 if from_moon[p] == 2]
     twelfth = [p for p in real7 if from_moon[p] == 12]
-    add("Sunapha Yoga", "Lunar", second and not twelfth, "Planet(s) 2nd from Moon: self-earned wealth.")
-    add("Anapha Yoga", "Lunar", twelfth and not second, "Planet(s) 12th from Moon: good health, character.")
-    add("Durudhara Yoga", "Lunar", second and twelfth, "Planets both sides of Moon: comforts, vehicles, generosity.", "strong")
+    add("Sunapha Yoga", "Lunar", second and not twelfth,
+        f"Beneficial planets situated in the 2nd house from Moon ({', '.join(second)}): Sunapha Yoga signifies self-earned wealth, practical resourcefulness, and a contented, self-reliant lifestyle. You possess practical skills that generate steady income, and your words carry thoughtful weight.")
+
+    add("Anapha Yoga", "Lunar", twelfth and not second,
+        f"Planets situated in the 12th house from Moon ({', '.join(twelfth)}): Anapha Yoga confers sound physical vitality, generous character, peaceful demeanor, and freedom from acute anxiety. You carry a reflective mindset, dignified habits, and an innate capacity to let go gracefully.")
+
+    add("Durudhara Yoga", "Lunar", second and twelfth,
+        f"Planets situated on both sides of Moon (2nd and 12th houses): Durudhara Yoga provides balanced support to your emotional foundation, conferring material comforts, conveyances, social popularity, and generous philanthropy. You enjoy financial stability and maintain equanimity through changing seasons.", "strong")
+
     kemadruma = not second and not twelfth and not any(from_moon[p] in KENDRA for p in real7) and not any(h[p] in KENDRA for p in real7)
-    add("Kemadruma Yoga", "Lunar (adverse)", kemadruma, "Moon isolated with no supporting planets: emotional/financial fluctuations.", "adverse")
+    add("Kemadruma Yoga", "Lunar (adverse)", kemadruma,
+        "Moon isolated with no supporting planets in adjacent houses or kendras: Kemadruma Yoga can produce periods of emotional loneliness or financial fluctuations, urging you to develop deep inner self-reliance. Note that classical cancellations from lagna kendras or Jupiter's aspect substantially mitigate this effect. Cultivating a trusted inner circle and regular meditation brings emotional calm.", "adverse")
+
     sun_s = sg["Sun"]
     s2 = [p for p in ("Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn") if p != "Moon" and house_from(sg[p], sun_s) == 2]
     s12 = [p for p in ("Mars", "Mercury", "Jupiter", "Venus", "Saturn") if house_from(sg[p], sun_s) == 12]
-    add("Veshi Yoga", "Solar", s2 and not s12, "Planet 2nd from Sun: balanced outlook, steady effort.")
-    add("Vashi Yoga", "Solar", s12 and not s2, "Planet 12th from Sun: skill, charity, fame.")
-    add("Ubhayachari Yoga", "Solar", s2 and s12, "Planets both sides of Sun: kingly status, eloquence.", "strong")
+    add("Veshi Yoga", "Solar", s2 and not s12,
+        f"Planets in the 2nd house from Sun ({', '.join(s2)}): Veshi Yoga bestows a balanced outlook, truthful speech, steady endurance, and honorable conduct. You work diligently and earn respect from authority figures through quiet persistence.")
+
+    add("Vashi Yoga", "Solar", s12 and not s2,
+        f"Planets in the 12th house from Sun ({', '.join(s12)}): Vashi Yoga gives scholarly interests, charitable nature, and recognition through selfless work. You possess a reflective mind and excel in tasks requiring deep concentration and dedication.")
+
+    add("Ubhayachari Yoga", "Solar", s2 and s12,
+        f"Planets situated on both sides of the Sun (2nd and 12th): Ubhayachari Yoga blesses you with eloquence, dignified bearing, steady fortunes, and wide respect. You balance ambition with practical restraint, handling authority with grace.", "strong")
+
     adhi = [p for p in ("Mercury", "Jupiter", "Venus") if from_moon[p] in (6, 7, 8)]
-    add("Adhi Yoga", "Raja", len(adhi) >= 2, "Benefics in 6/7/8 from Moon: leadership, authority.", "strong" if len(adhi) == 3 else "medium")
-    add("Amala Yoga", "Fame", any(p in BENEFICS - {"Moon"} for p in occ[10]) and not any(p in MALEFICS for p in occ[10]), "Only benefic in 10th: spotless reputation.")
+    add("Adhi Yoga", "Raja", len(adhi) >= 2,
+        f"Benefic planets situated in the 6th, 7th, or 8th houses from Moon ({', '.join(adhi)}): Adhi Yoga is a prestigious classical Raja Yoga conferring leadership, scholarly renown, victory over competitors without friction, and lasting material comfort. It endows you with diplomatic tact and natural eminence in your profession.", "strong" if len(adhi) == 3 else "medium")
+
+    add("Amala Yoga", "Fame", any(p in BENEFICS - {"Moon"} for p in occ[10]) and not any(p in MALEFICS for p in occ[10]),
+        "Only benefic planets occupying the 10th house: Amala Yoga confers an unblemished public reputation, high ethical standards, and lasting professional honour. Your work life is characterized by integrity, benevolence, and meaningful service that earns widespread respect.")
+
     l9 = lord[9]
-    add("Lakshmi Yoga", "Wealth", h[l9] in KENDRA | TRIKONA and dig[l9] in ("own", "exalted", "moolatrikona") and dig[lord[1]] not in ("debilitated",), "Strong 9th lord in kendra/trikona: fortune, wealth, grace.", "strong")
-    add("Saraswati Yoga", "Learning", all(h[p] in KENDRA | TRIKONA | {2} for p in ("Jupiter", "Venus", "Mercury")) and dig["Jupiter"] not in ("debilitated", "enemy"), "Jupiter, Venus, Mercury in kendra/trikona/2nd: learning, arts.", "strong")
+    add("Lakshmi Yoga", "Wealth", h[l9] in KENDRA | TRIKONA and dig[l9] in ("own", "exalted", "moolatrikona") and dig[lord[1]] not in ("debilitated",),
+        f"Strong 9th lord ({l9}) in a kendra or trikona (house {h[l9]}) with well-placed Lagna lord: Lakshmi Yoga is a supreme signature of prosperity, grace, noble character, and good fortune. Wealth flows through legitimate, honorable pursuits, and you enjoy family happiness and divine blessings.", "strong")
+
+    add("Saraswati Yoga", "Learning", all(h[p] in KENDRA | TRIKONA | {2} for p in ("Jupiter", "Venus", "Mercury")) and dig["Jupiter"] not in ("debilitated", "enemy"),
+        "Benefics (Jupiter, Venus, Mercury) occupying kendras, trikonas, or the 2nd house: Saraswati Yoga confers profound learning, poetic sensitivity, mastery of language, and artistic refinement. You are blessed with eloquence, sharp memory, and the ability to teach, write, or counsel with wisdom and grace.", "strong")
+
     # Raja yogas: kendra lord + trikona lord link
     rj = []
     for k in (1, 4, 7, 10):
@@ -413,19 +451,33 @@ def detect_yogas(c: dict) -> list[dict]:
             a, b = lord[k], lord[t]
             if a != b and (mutual_aspect_or_conj(a, b) or exchange(a, b)):
                 rj.append(f"{k}L {a} + {t}L {b}")
-    add("Raja Yoga (Kendra-Trikona)", "Raja", rj, "Kendra and trikona lords linked: power, status. " + "; ".join(rj), "strong")
+    add("Raja Yoga (Kendra-Trikona)", "Raja", rj,
+        f"Kendra (action/status) and Trikona (dharma/fortune) lords linked ({'; '.join(rj)}): This classic Parashari Raja Yoga unites power with purpose, indicating high social status, career authority, and the ability to steer organizations or projects. You have the natural capacity to turn ambition into honorable achievement, rising progressively in life.", "strong")
+
     yk = [p for p in SEVEN if {i for i in range(1, 13) if lord[i] == p} & KENDRA - {1} and {i for i in range(1, 13) if lord[i] == p} & {5, 9}]
-    add("Yogakaraka", "Raja", yk, f"Single planet ruling kendra + trikona ({', '.join(yk)}): strong benefactor of the chart.", "strong")
-    add("Dharma-Karmadhipati Yoga", "Raja", mutual_aspect_or_conj(lord[9], lord[10]) or exchange(lord[9], lord[10]) or lord[9] == lord[10], "9th and 10th lords linked: purposeful career, high achievement.", "strong")
+    add("Yogakaraka", "Raja", yk,
+        f"Single planet ruling both a kendra and a trikona ({', '.join(yk)}): This planet acts as your chart's supreme functional benefactor, harmonizing effort with destiny. Its dasha periods and transits bring major milestones, elevation in status, and lasting blessings.", "strong")
+
+    add("Dharma-Karmadhipati Yoga", "Raja", mutual_aspect_or_conj(lord[9], lord[10]) or exchange(lord[9], lord[10]) or lord[9] == lord[10],
+        f"9th lord ({lord[9]}) and 10th lord ({lord[10]}) in mutual relationship: One of the highest Raja Yogas in Vedic astrology, conferring an exceptionally purposeful career, high leadership standing, and ethical renown. Your profession aligns with your deeper life purpose, leading to public recognition and lasting achievements.", "strong")
+
     dh = []
     for a in (2, 11):
         for b in (1, 5, 9):
             if lord[a] != lord[b] and (conj(lord[a], lord[b]) or exchange(lord[a], lord[b])):
                 dh.append(f"{a}L+{b}L")
-    add("Dhana Yoga", "Wealth", dh, "Wealth lords linked with lagna/trikona lords: accumulation of wealth. " + ", ".join(dh))
-    add("Harsha Viparita Raja Yoga", "Viparita", h[lord[6]] in DUSTHANA, "6th lord in dusthana: victory over enemies, health.")
-    add("Sarala Viparita Raja Yoga", "Viparita", h[lord[8]] in DUSTHANA, "8th lord in dusthana: longevity, fearlessness.")
-    add("Vimala Viparita Raja Yoga", "Viparita", h[lord[12]] in DUSTHANA, "12th lord in dusthana: frugality, independence.")
+    add("Dhana Yoga", "Wealth", dh,
+        f"Wealth lords linked with lagna or fortune lords ({', '.join(dh)}): Dhana Yoga signifies strong earning capacity, accumulation of assets, and commercial prosperity. You have an instinct for generating value and securing family financial stability through steady investments.")
+
+    add("Harsha Viparita Raja Yoga", "Viparita", h[lord[6]] in DUSTHANA,
+        f"6th lord ({lord[6]}) situated in a dusthana (house {h[lord[6]]}): Harsha Yoga creates victory over competitors, strong physical immunity, resilience against obstacles, and the ability to emerge stronger from disputes or trials.")
+
+    add("Sarala Viparita Raja Yoga", "Viparita", h[lord[8]] in DUSTHANA,
+        f"8th lord ({lord[8]}) situated in a dusthana (house {h[lord[8]]}): Sarala Yoga confers fearlessness, investigative acumen, long life, and unexpected triumphs over adversity. Hidden crises turn into stepping stones for personal elevation.")
+
+    add("Vimala Viparita Raja Yoga", "Viparita", h[lord[12]] in DUSTHANA,
+        f"12th lord ({lord[12]}) situated in a dusthana (house {h[lord[12]]}): Vimala Yoga grants financial prudence, independence of character, peaceful inner life, and noble expenditures. You avoid unnecessary entanglements and manage resources wisely.")
+
     nb = []
     for p in SEVEN:
         if dig[p] == "debilitated":
@@ -434,39 +486,72 @@ def detect_yogas(c: dict) -> list[dict]:
             ex_lord = next((q for q, (es, _) in EXALT.items() if es == deb_sign and q in SEVEN), None)
             if h[disp] in KENDRA or from_moon[disp] in KENDRA or (ex_lord and (h[ex_lord] in KENDRA or from_moon[ex_lord] in KENDRA)) or dig.get(disp) == "exalted":
                 nb.append(p)
-    add("Neechabhanga Raja Yoga", "Raja", nb, f"Debilitation cancelled for {', '.join(nb)}: rise after early struggle.", "strong")
+    add("Neechabhanga Raja Yoga", "Raja", nb,
+        f"Debilitation cancelled for {', '.join(nb)}: A classic signature of rise after initial hardship. The planet's early weakness transforms through disciplined effort, life experience, and persistence into formidable strength and practical authority in adulthood.", "strong")
+
     ex = [f"{a}-{b}" for i, a in enumerate(SEVEN) for b in SEVEN[i + 1:] if exchange(a, b)]
-    add("Parivartana Yoga", "Exchange", ex, "Sign exchange (" + ", ".join(ex) + "): mutual strengthening of houses involved.")
-    add("Shakata Yoga", "Lunar (adverse)", house_from(sg["Moon"], sg["Jupiter"]) in (6, 8, 12) and h["Moon"] not in KENDRA, "Moon 6/8/12 from Jupiter: ups and downs in fortune.", "adverse")
-    add("Kahala Yoga", "Courage", h[lord[4]] in KENDRA and h[lord[9]] in KENDRA and dig[lord[1]] in ("own", "exalted", "moolatrikona", "friendly"), "4th & 9th lords in kendras with strong lagna lord: boldness, command.")
-    add("Chamara Yoga", "Fame", dig[lord[1]] == "exalted" and h[lord[1]] in KENDRA and from_moon["Jupiter"] in KENDRA, "Exalted lagna lord in kendra aspected by Jupiter: honour, scholarship.")
+    add("Parivartana Yoga", "Exchange", ex,
+        f"Mutual exchange of signs ({', '.join(ex)}): Sign exchange creates a powerful mutual bond between the houses involved, strengthening both areas and allowing you to convert resources from one domain into triumphs in the other.")
+
+    add("Shakata Yoga", "Lunar (adverse)", house_from(sg["Moon"], sg["Jupiter"]) in (6, 8, 12) and h["Moon"] not in KENDRA,
+        f"Moon situated in house {house_from(sg['Moon'], sg['Jupiter'])} from Jupiter: Shakata Yoga signifies periodic cycles of rise and fall, resembling the movement of a cart wheel. Success comes in waves, requiring steady financial discipline and emotional equanimity. Mitigated when Moon or Jupiter is in a kendra from lagna.", "adverse")
+
+    add("Kahala Yoga", "Courage", h[lord[4]] in KENDRA and h[lord[9]] in KENDRA and dig[lord[1]] in ("own", "exalted", "moolatrikona", "friendly"),
+        f"4th lord ({lord[4]}) and 9th lord ({lord[9]}) in kendras with strong Lagna lord ({lord[1]}): Kahala Yoga confers boldness, organizational command, courage, and leadership over teams or projects. You confront challenges head-on and earn loyal followers.")
+
+    add("Chamara Yoga", "Fame", dig[lord[1]] == "exalted" and h[lord[1]] in KENDRA and from_moon["Jupiter"] in KENDRA,
+        f"Exalted Lagna lord ({lord[1]}) in a kendra aspected by Jupiter: Chamara Yoga indicates royal honors, scholarly renown, eloquence, and a long, distinguished life marked by public respect.")
+
     up_ben = [p for p in ("Mercury", "Jupiter", "Venus") if from_moon[p] in UPACHAYA]
-    add("Vasumati Yoga", "Wealth", len(up_ben) >= 2, "Benefics in upachayas from Moon: abundant wealth.")
-    add("Parvata Yoga", "Fame", all(p not in MALEFICS for i in (6, 8) for p in occ[i]) and any(p in BENEFICS for i in KENDRA for p in occ[i]), "Benefics in kendras, 6/8 clean: prosperity, charity.")
-    add("Shubha Kartari Yoga", "Lagna", any(p in BENEFICS for p in occ[2]) and any(p in BENEFICS for p in occ[12]), "Benefics hem the lagna: protection, good health.")
-    add("Papa Kartari Yoga", "Lagna (adverse)", any(p in MALEFICS for p in occ[2]) and any(p in MALEFICS for p in occ[12]), "Malefics hem the lagna: obstacles, pressure.", "adverse")
-    add("Sankha Yoga", "Prosperity", house_from(sg[lord[5]], sg[lord[6]]) in KENDRA and dig[lord[1]] not in ("debilitated",), "5th & 6th lords mutually in kendras: humane, long-lived, prosperous.")
-    add("Mahabhagya-type Lagna strength", "Lagna", dig[lord[1]] in ("own", "exalted", "moolatrikona") and h[lord[1]] in KENDRA | TRIKONA, "Lagna lord dignified in kendra/trikona: vitality, self-made success.", "strong")
-    add("Kalanidhi Yoga", "Learning", h["Jupiter"] in (2, 5) and (conj("Jupiter", "Mercury") or conj("Jupiter", "Venus")), "Jupiter in 2/5 with Mercury or Venus: refinement, learning.")
-    add("Chandra-Adhi (Moon in kendra from Sun)", "Lunar", house_from(sg["Moon"], sg["Sun"]) in KENDRA, "Moon in kendra from Sun: moderate wealth and intelligence.")
-    add("Guru-Chandala Yoga", "Adverse", conj("Jupiter", "Rahu") or conj("Jupiter", "Ketu"), "Jupiter with node: unorthodox beliefs, guidance issues.", "adverse")
-    add("Angarak Yoga", "Adverse", conj("Mars", "Rahu"), "Mars with Rahu: temper, accidents, aggression.", "adverse")
-    add("Vish Yoga", "Adverse", conj("Saturn", "Moon"), "Saturn with Moon: melancholy, heaviness.", "adverse")
-    add("Grahan Yoga", "Adverse", conj("Sun", "Rahu") or conj("Moon", "Rahu") or conj("Sun", "Ketu") or conj("Moon", "Ketu"), "Luminary with node: eclipse-like obscuring of significations.", "adverse")
+    add("Vasumati Yoga", "Wealth", len(up_ben) >= 2,
+        f"Benefic planets occupying upachaya houses (3, 6, 10, 11) from Moon ({', '.join(up_ben)}): Vasumati Yoga indicates abundant financial prosperity, independence, and the ability to create substantial wealth through enterprise and strategic acumen.")
+
+    add("Parvata Yoga", "Fame", all(p not in MALEFICS for i in (6, 8) for p in occ[i]) and any(p in BENEFICS for i in KENDRA for p in occ[i]),
+        "Benefics in kendras while 6th and 8th houses remain free of malefics: Parvata Yoga grants enduring fame, extensive property, benevolent character, and leadership that stands immovable like a mountain.")
+
+    add("Shubha Kartari Yoga", "Lagna", any(p in BENEFICS for p in occ[2]) and any(p in BENEFICS for p in occ[12]),
+        "Lagna hemmed between benefic planets in 2nd and 12th houses: Shubha Kartari forms a protective shield around your physical vitality and personal reputation, ensuring smooth recovery from setbacks and pleasant living conditions.")
+
+    add("Papa Kartari Yoga", "Lagna (adverse)", any(p in MALEFICS for p in occ[2]) and any(p in MALEFICS for p in occ[12]),
+        "Lagna hemmed between malefic planets in 2nd and 12th houses: Papa Kartari can create feelings of being constrained, external pressures, or health vulnerabilities during stressful seasons. Practicing stress management and regular spiritual or physical grounding dispels heaviness.", "adverse")
+
+    add("Sankha Yoga", "Prosperity", house_from(sg[lord[5]], sg[lord[6]]) in KENDRA and dig[lord[1]] not in ("debilitated",),
+        f"5th and 6th lords mutually in kendras with dignified Lagna lord: Sankha Yoga endows you with a compassionate nature, philosophical learning, devotion to duty, and enduring family happiness.")
+
+    add("Mahabhagya-type Lagna strength", "Lagna", dig[lord[1]] in ("own", "exalted", "moolatrikona") and h[lord[1]] in KENDRA | TRIKONA,
+        f"Lagna lord ({lord[1]}) dignified in kendra/trikona (house {h[lord[1]]}): Grants robust constitutional vigor, personal magnetism, self-made success, and natural confidence that inspires others.", "strong")
+
+    add("Kalanidhi Yoga", "Learning", h["Jupiter"] in (2, 5) and (conj("Jupiter", "Mercury") or conj("Jupiter", "Venus")),
+        f"Jupiter in house {h['Jupiter']} associated with Mercury or Venus: Kalanidhi Yoga confers cultural refinement, artistic appreciation, scholarly wisdom, and respect among educated peers.")
+
+    add("Chandra-Adhi (Moon in kendra from Sun)", "Lunar", house_from(sg["Moon"], sg["Sun"]) in KENDRA,
+        "Moon in a kendra from Sun: Provides emotional clarity, balanced ambition, steady intelligence, and moderate material comfort.")
+
+    add("Guru-Chandala Yoga", "Adverse", conj("Jupiter", "Rahu") or conj("Jupiter", "Ketu"),
+        f"Jupiter conjunct a lunar node ({'Rahu' if conj('Jupiter', 'Rahu') else 'Ketu'}) in house {h['Jupiter']}: Guru-Chandala Yoga stimulates unconventional thinking, questioning of traditional dogma, and independent spiritual or intellectual inquiry. In everyday life, be selective when choosing mentors and financial advisors; grounding your philosophical curiosities in authentic, time-tested wisdom brings excellent intellectual breakthroughs.", "adverse")
+
+    add("Angarak Yoga", "Adverse", conj("Mars", "Rahu"),
+        f"Mars conjunct Rahu in house {h['Mars']}: Angarak Yoga creates high fiery energy, bold drive, and sudden impulses. It gives exceptional courage in technical or competitive arenas, but warrants mindful control of temper, avoidance of road rage, and cautious handling of machinery. Regular physical exercise and mindfulness channel this intense fire constructively.", "adverse")
+
+    add("Vish Yoga", "Adverse", conj("Saturn", "Moon"),
+        f"Saturn conjunct Moon in house {h['Saturn']}: Vish Yoga unites lunar sensitivity with Saturnian gravity, which can create emotional mood swings, melancholic introspection, or an inclination to carry the world's weight on your shoulders. On the positive side, it bestows immense emotional resilience, depth, and empathy for others' suffering. Worship of Shiva, warm social connections, and not isolating yourself during down periods bring deep peace.", "adverse")
+
+    add("Grahan Yoga", "Adverse", conj("Sun", "Rahu") or conj("Moon", "Rahu") or conj("Sun", "Ketu") or conj("Moon", "Ketu"),
+        f"Luminary conjunct a lunar node in house {h['Sun'] if conj('Sun', 'Rahu') or conj('Sun', 'Ketu') else h['Moon']}: Grahan Yoga indicates occasional eclipse-like moments of self-doubt, identity questioning, or emotional fluctuations. In career or family, milestones require extra persistence. It gives deep intuition, spiritual awareness, and research capabilities when navigated with patience.", "adverse")
     return Y
 
 
 # ---------- doshas ----------
 REMEDY_DB = {
-    "Sun": {"gem": "Ruby (Manik)", "metal": "Gold", "finger": "Ring", "mantra": "Om Hraam Hreem Hraum Sah Suryaya Namah", "count": 7000, "day": "Sunday", "charity": "Wheat, jaggery, copper to the needy on Sunday", "ritual": "Offer water (Arghya) to rising Sun; recite Aditya Hridayam", "deity": "Surya"},
-    "Moon": {"gem": "Pearl (Moti)", "metal": "Silver", "finger": "Little", "mantra": "Om Shraam Shreem Shraum Sah Chandraya Namah", "count": 11000, "day": "Monday", "charity": "Rice, milk, white cloth on Monday", "ritual": "Shiva abhishek with milk on Mondays", "deity": "Shiva/Parvati"},
-    "Mars": {"gem": "Red Coral (Moonga)", "metal": "Copper/Gold", "finger": "Ring", "mantra": "Om Kraam Kreem Kraum Sah Bhaumaya Namah", "count": 10000, "day": "Tuesday", "charity": "Red lentils (masoor), jaggery on Tuesday", "ritual": "Hanuman Chalisa on Tuesdays", "deity": "Hanuman/Kartikeya"},
-    "Mercury": {"gem": "Emerald (Panna)", "metal": "Gold", "finger": "Little", "mantra": "Om Braam Breem Braum Sah Budhaya Namah", "count": 9000, "day": "Wednesday", "charity": "Green moong, green cloth on Wednesday", "ritual": "Vishnu Sahasranama; feed cows green grass", "deity": "Vishnu"},
-    "Jupiter": {"gem": "Yellow Sapphire (Pukhraj)", "metal": "Gold", "finger": "Index", "mantra": "Om Graam Greem Graum Sah Gurave Namah", "count": 19000, "day": "Thursday", "charity": "Chana dal, turmeric, yellow cloth on Thursday", "ritual": "Respect teachers; Guru stotra on Thursdays", "deity": "Brihaspati/Vishnu"},
-    "Venus": {"gem": "Diamond / White Sapphire", "metal": "Silver/Platinum", "finger": "Middle/Ring", "mantra": "Om Draam Dreem Draum Sah Shukraya Namah", "count": 16000, "day": "Friday", "charity": "Rice, sugar, white sweets on Friday", "ritual": "Lakshmi puja on Fridays", "deity": "Lakshmi"},
-    "Saturn": {"gem": "Blue Sapphire (Neelam) — trial first", "metal": "Iron/Silver", "finger": "Middle", "mantra": "Om Praam Preem Praum Sah Shanaischaraya Namah", "count": 23000, "day": "Saturday", "charity": "Black sesame, mustard oil, iron to the poor on Saturday", "ritual": "Light sesame-oil lamp under Peepal on Saturdays; Shani stotra", "deity": "Shani/Hanuman"},
-    "Rahu": {"gem": "Hessonite (Gomed)", "metal": "Silver/Ashtadhatu", "finger": "Middle", "mantra": "Om Bhraam Bhreem Bhraum Sah Rahave Namah", "count": 18000, "day": "Saturday", "charity": "Blue/black cloth, coconut, mustard on Saturday", "ritual": "Durga Saptashati; feed stray dogs", "deity": "Durga"},
-    "Ketu": {"gem": "Cat's Eye (Lehsunia)", "metal": "Silver", "finger": "Little", "mantra": "Om Sraam Sreem Sraum Sah Ketave Namah", "count": 17000, "day": "Tuesday", "charity": "Blankets, sesame, multi-coloured cloth", "ritual": "Ganesha worship; feed dogs", "deity": "Ganesha"},
+    "Sun": {"gem": "Ruby (Manik)", "metal": "Gold", "finger": "Ring", "mantra": "Om Hraam Hreem Hraum Sah Suryaya Namah", "count": 7000, "day": "Sunday", "charity": "Wheat, jaggery, copper to the needy on Sunday", "ritual": "Offer water (Arghya) to rising Sun; recite Aditya Hridayam", "deity": "Surya", "purpose": "Fortifies life vitality, self-confidence, leadership presence, career dignity, and harmony with father and authority figures."},
+    "Moon": {"gem": "Pearl (Moti)", "metal": "Silver", "finger": "Little", "mantra": "Om Shraam Shreem Shraum Sah Chandraya Namah", "count": 11000, "day": "Monday", "charity": "Rice, milk, white cloth on Monday", "ritual": "Shiva abhishek with milk on Mondays", "deity": "Shiva/Parvati", "purpose": "Nourishes emotional serenity, mental resilience, restful sleep, digestive balance, and gentle maternal harmony."},
+    "Mars": {"gem": "Red Coral (Moonga)", "metal": "Copper/Gold", "finger": "Ring", "mantra": "Om Kraam Kreem Kraum Sah Bhaumaya Namah", "count": 10000, "day": "Tuesday", "charity": "Red lentils (masoor), jaggery on Tuesday", "ritual": "Hanuman Chalisa on Tuesdays", "deity": "Hanuman/Kartikeya", "purpose": "Channels courage, physical stamina, decisive action, and property matters while softening hasty anger or conflict."},
+    "Mercury": {"gem": "Emerald (Panna)", "metal": "Gold", "finger": "Little", "mantra": "Om Braam Breem Braum Sah Budhaya Namah", "count": 9000, "day": "Wednesday", "charity": "Green moong, green cloth on Wednesday", "ritual": "Vishnu Sahasranama; feed cows green grass", "deity": "Vishnu", "purpose": "Sharpens intellectual discernment, clear communication, commercial acumen, memory, and nervous equilibrium."},
+    "Jupiter": {"gem": "Yellow Sapphire (Pukhraj)", "metal": "Gold", "finger": "Index", "mantra": "Om Graam Greem Graum Sah Gurave Namah", "count": 19000, "day": "Thursday", "charity": "Chana dal, turmeric, yellow cloth on Thursday", "ritual": "Respect teachers; Guru stotra on Thursdays", "deity": "Brihaspati/Vishnu", "purpose": "Expands wisdom, sound ethical judgment, financial abundance, educational honors, and divine grace."},
+    "Venus": {"gem": "Diamond / White Sapphire", "metal": "Silver/Platinum", "finger": "Middle/Ring", "mantra": "Om Draam Dreem Draum Sah Shukraya Namah", "count": 16000, "day": "Friday", "charity": "Rice, sugar, white sweets on Friday", "ritual": "Lakshmi puja on Fridays", "deity": "Lakshmi", "purpose": "Cultivates marital harmony, aesthetic joy, gracious relationships, artistic talent, and material refinement."},
+    "Saturn": {"gem": "Blue Sapphire (Neelam) — trial first", "metal": "Iron/Silver", "finger": "Middle", "mantra": "Om Praam Preem Praum Sah Shanaischaraya Namah", "count": 23000, "day": "Saturday", "charity": "Black sesame, mustard oil, iron to the poor on Saturday", "ritual": "Light sesame-oil lamp under Peepal on Saturdays; Shani stotra", "deity": "Shani/Hanuman", "purpose": "Builds deep discipline, enduring perseverance, karmic protection, structural stability, and patience under pressure."},
+    "Rahu": {"gem": "Hessonite (Gomed)", "metal": "Silver/Ashtadhatu", "finger": "Middle", "mantra": "Om Bhraam Bhreem Bhraum Sah Rahave Namah", "count": 18000, "day": "Saturday", "charity": "Blue/black cloth, coconut, mustard on Saturday", "ritual": "Durga Saptashati; feed stray dogs", "deity": "Durga", "purpose": "Harmonizes ambition, clears psychological confusion, protects against deception, and stabilizes unexpected life changes."},
+    "Ketu": {"gem": "Cat's Eye (Lehsunia)", "metal": "Silver", "finger": "Little", "mantra": "Om Sraam Sreem Sraum Sah Ketave Namah", "count": 17000, "day": "Tuesday", "charity": "Blankets, sesame, multi-coloured cloth", "ritual": "Ganesha worship; feed dogs", "deity": "Ganesha", "purpose": "Awakens spiritual discernment, releases past-life burdens, fosters research insight, and grants inner liberation."},
 }
 
 
@@ -488,16 +573,33 @@ def detect_doshas(c: dict) -> list[dict]:
     sev = len(hits) / 3
     if cancel:
         sev *= 0.4
-    out.append({"name": "Manglik (Kuja) Dosha", "present": bool(hits), "severity": _sev(sev) if hits else "none", "score": round(sev * 100), "details": f"Mars in house {mh['Lagna']} from Lagna, {mh['Moon']} from Moon, {mh['Venus']} from Venus. Triggered from: {', '.join(hits) or 'none'}.",
-                "cancellations": cancel, "remedies": ["Kumbh Vivah / match with Manglik partner", "Hanuman Chalisa on Tuesdays", REMEDY_DB["Mars"]["charity"], f"Mantra: {REMEDY_DB['Mars']['mantra']} ×108 daily"] if hits else []})
+    hits_str = f"Mars in house {mh['Lagna']} from Lagna, {mh['Moon']} from Moon, {mh['Venus']} from Venus. Triggered from: {', '.join(hits) or 'none'}."
+    if hits:
+        details_text = (
+            f"{hits_str} Mars introduces high passion, directness, and strong individuality into partnership domains. "
+            "In relationships, this can sometimes lead to impatience or friction if differences are not communicated calmly. "
+            + (f"Classical mitigating factors ({'; '.join(cancel)}) substantially soften this influence." if cancel else "Mutual respect, giving each other breathing room, and emotional maturity bring out the best in this energy.")
+        )
+    else:
+        details_text = f"{hits_str} Mars does not afflict key partnership houses; relationship dynamics remain unencumbered by Kuja dosha."
+    out.append({"name": "Manglik (Kuja) Dosha", "present": bool(hits), "severity": _sev(sev) if hits else "none", "score": round(sev * 100), "details": details_text,
+                "cancellations": cancel, "remedies": ["Match with a compatible partner or wait until emotional maturity (around age 28)", "Recite Hanuman Chalisa or Mars Gayatri on Tuesdays", REMEDY_DB["Mars"]["charity"], f"Mars mantra: {REMEDY_DB['Mars']['mantra']} (108 times)", "Practice active listening and patience during relationship discussions"] if hits else []})
     rahu, ketu = P(c, "Rahu")["absolute_longitude"], P(c, "Ketu")["absolute_longitude"]
     side_a = all((P(c, p)["absolute_longitude"] - rahu) % 360 < 180 for p in SEVEN)
     side_b = all((P(c, p)["absolute_longitude"] - ketu) % 360 < 180 for p in SEVEN)
     ks_types = {1: "Anant", 2: "Kulik", 3: "Vasuki", 4: "Shankhpal", 5: "Padma", 6: "Mahapadma", 7: "Takshak", 8: "Karkotak", 9: "Shankhachood", 10: "Ghatak", 11: "Vishdhar", 12: "Sheshnag"}
     ks = side_a or side_b
+    if ks:
+        ks_details = (
+            f"All seven classical planets are hemmed between Rahu and Ketu ({'Rahu→Ketu' if side_a else 'Ketu→Rahu'}), with Rahu situated in house {h['Rahu']} ({ks_types[h['Rahu']]} Kaal Sarp). "
+            "Life can experience periods of intense effort followed by sudden turning points. "
+            "It rewards perseverance, strict ethics, and dedication, often leading to significant accomplishment after early trials."
+        )
+    else:
+        ks_details = "Planets are distributed on both sides of the nodal axis; planetary energies flow freely without Kaal Sarp hemming."
     out.append({"name": "Kaal Sarp Dosha", "present": ks, "severity": "high" if ks else "none", "score": 80 if ks else 0, "type": ks_types[h["Rahu"]] if ks else None,
-                "details": ("All seven planets hemmed between Rahu–Ketu axis (" + ("Rahu→Ketu" if side_a else "Ketu→Rahu") + f"); Rahu in house {h['Rahu']}.") if ks else "Planets on both sides of the nodal axis.",
-                "cancellations": [], "remedies": ["Kaal Sarp shanti puja (Trimbakeshwar/Ujjain)", "Maha Mrityunjaya Japa", "Naag Panchami worship", REMEDY_DB["Rahu"]["ritual"]] if ks else []})
+                "details": ks_details,
+                "cancellations": [], "remedies": ["Perform Kaal Sarp shanti puja or Maha Mrityunjaya Japa", "Offer milk or water to Shiva Lingam on Mondays and Naag Panchami", "Feed stray dogs or birds and assist service workers", REMEDY_DB["Rahu"]["ritual"]] if ks else []})
     pitra = []
     if sg["Sun"] == sg["Rahu"] or sg["Sun"] == sg["Ketu"]:
         pitra.append("Sun with node")
@@ -507,8 +609,15 @@ def detect_doshas(c: dict) -> list[dict]:
         pitra.append("Malefic in 9th house")
     if P(c, lord_of_house(c, 9))["house"] in DUSTHANA:
         pitra.append("9th lord in dusthana")
-    out.append({"name": "Pitra Dosha", "present": bool(pitra), "severity": _sev(len(pitra) / 3), "score": min(100, len(pitra) * 33), "details": "; ".join(pitra) or "No ancestral affliction indicators.",
-                "cancellations": ["Jupiter aspects 9th"] if "Jupiter" in aspected_by(c, 9) else [], "remedies": ["Pind daan / Shraddha during Pitru Paksha", "Tarpan on Amavasya", "Feed crows and Brahmins", REMEDY_DB["Sun"]["ritual"]] if pitra else []})
+    if pitra:
+        pitra_details = (
+            f"{'; '.join(pitra)}. Indicates ancestral obligations or lessons calling for family healing, patience with elders, and honoring departed forebears. "
+            "With regular respect and mindful duty, obstacles in career and family lineage are gracefully resolved."
+        )
+    else:
+        pitra_details = "No ancestral affliction indicators found; solar and 9th house lineage energies are clear."
+    out.append({"name": "Pitra Dosha", "present": bool(pitra), "severity": _sev(len(pitra) / 3), "score": min(100, len(pitra) * 33), "details": pitra_details,
+                "cancellations": ["Jupiter aspects 9th"] if "Jupiter" in aspected_by(c, 9) else [], "remedies": ["Perform Pind Daan or Tarpan during Pitru Paksha and on Amavasya", "Feed cows, crows, and needy individuals on Saturdays or new moon days", "Respect parents and elders, seeking their heartfelt blessings", REMEDY_DB["Sun"]["ritual"]] if pitra else []})
     sat = c.get("_transit_saturn")
     moon_s = sg["Moon"]
     swe.set_sid_mode(AYANAMSA.get(c["settings"]["ayanamsa"], swe.SIDM_LAHIRI))
@@ -518,12 +627,24 @@ def detect_doshas(c: dict) -> list[dict]:
     shani_issues = [phase] if phase else []
     if P(c, "Saturn")["dignity"] == "debilitated":
         shani_issues.append("Natal Saturn debilitated")
+    shani_details = (
+        f"Transit Saturn in {SIGNS[ts]}, house {rel} from natal Moon ({SIGNS[moon_s]}). "
+        + (f"{'; '.join(shani_issues)}. " if shani_issues else "")
+        + "This is a transformative maturation cycle that builds long-term endurance, emotional resilience, and practical realism. "
+        "It rewards consistent discipline, unhurried decisions, and ethical conduct."
+    )
     out.append({"name": "Shani Dosha / Sade Sati", "present": bool(shani_issues), "severity": "high" if rel == 1 else ("medium" if shani_issues else "none"), "score": {1: 85, 12: 65, 2: 60, 8: 70, 4: 55}.get(rel, 30 if shani_issues else 0),
-                "details": f"Transit Saturn in {SIGNS[ts]}, house {rel} from natal Moon ({SIGNS[moon_s]}). " + "; ".join(shani_issues), "cancellations": [],
-                "remedies": [REMEDY_DB["Saturn"]["ritual"], REMEDY_DB["Saturn"]["charity"], f"Mantra: {REMEDY_DB['Saturn']['mantra']}", "Serve elderly/labourers; Hanuman worship"] if shani_issues else []})
+                "details": shani_details, "cancellations": [],
+                "remedies": [REMEDY_DB["Saturn"]["ritual"], REMEDY_DB["Saturn"]["charity"], f"Mantra: {REMEDY_DB['Saturn']['mantra']} (108 times)", "Serve the elderly, differently-abled, or laborers with humility", "Maintain patience and avoid impulsive speculative risks"] if shani_issues else []})
     grahan = [x for x in ("Sun", "Moon") if sg[x] in (sg["Rahu"], sg["Ketu"])]
-    out.append({"name": "Grahan Dosha", "present": bool(grahan), "severity": _sev(len(grahan) / 2), "score": len(grahan) * 45, "details": f"{', '.join(grahan)} conjunct a lunar node." if grahan else "Luminaries free of nodes.",
-                "cancellations": [], "remedies": ["Grahan shanti puja", REMEDY_DB["Rahu"]["mantra"]] if grahan else []})
+    if grahan:
+        grahan_details = (
+            f"{', '.join(grahan)} conjunct a lunar node. This creates occasional moments of emotional sensitivity or identity questioning, but also bestows powerful intuition, deep psychological insight, and spiritual inclination when embraced."
+        )
+    else:
+        grahan_details = "Luminaries (Sun and Moon) are free of nodal conjunctions; mental and physical vitality are unobstructed."
+    out.append({"name": "Grahan Dosha", "present": bool(grahan), "severity": _sev(len(grahan) / 2), "score": len(grahan) * 45, "details": grahan_details,
+                "cancellations": [], "remedies": ["Perform Grahan shanti or recite Maha Mrityunjaya mantra", f"Mantra: {REMEDY_DB['Rahu']['mantra']}", "Offer white items (milk, rice) or jaggery in charity to the underprivileged", "Practice meditation and grounding pranayama during eclipse periods"] if grahan else []})
     return out
 
 
@@ -636,13 +757,30 @@ def shadbala(c: dict, pos: dict, jd: float, lat: float, lon: float) -> dict:
 
 # ---------- interpretations ----------
 HOUSE_SIG = {
-    1: ("Self, body, personality, vitality", "Lagna"), 2: ("Wealth, family, speech, food", "Dhana"), 3: ("Courage, siblings, communication, short travel", "Sahaja"),
-    4: ("Mother, home, property, vehicles, inner peace", "Sukha"), 5: ("Intellect, children, creativity, past merit, romance", "Putra"), 6: ("Enemies, disease, debts, service, competition", "Ripu"),
-    7: ("Spouse, partnerships, business, public dealings", "Kalatra"), 8: ("Longevity, transformation, occult, inheritance, sudden events", "Randhra"), 9: ("Fortune, father, dharma, guru, long travel", "Dharma"),
-    10: ("Career, status, authority, karma", "Karma"), 11: ("Gains, income, friends, aspirations", "Labha"), 12: ("Loss, expenses, foreign lands, moksha, sleep", "Vyaya"),
+    1: ("Self, body, personality, vitality, physical constitution", "Lagna"),
+    2: ("Wealth, family, speech, food, accumulated assets", "Dhana"),
+    3: ("Courage, siblings, communication, initiatives, short travel", "Sahaja"),
+    4: ("Mother, home, property, vehicles, emotional peace", "Sukha"),
+    5: ("Intellect, children, creativity, past-life merit, romance", "Putra"),
+    6: ("Enemies, disease, debts, service, competition, daily work", "Ripu"),
+    7: ("Spouse, partnerships, marriage, business, public dealings", "Kalatra"),
+    8: ("Longevity, transformation, occult, joint resources, sudden transitions", "Randhra"),
+    9: ("Fortune, father, dharma, wisdom, higher learning, pilgrimages", "Dharma"),
+    10: ("Career, status, leadership, authority, professional legacy", "Karma"),
+    11: ("Gains, income, social networks, elder siblings, major aspirations", "Labha"),
+    12: ("Loss, expenses, solitude, foreign lands, spiritual liberation (moksha)", "Vyaya"),
 }
-PLANET_NATURE = {"Sun": "authority, father, soul, government", "Moon": "mind, mother, emotions, public", "Mars": "energy, courage, land, siblings", "Mercury": "intellect, trade, speech, skills",
-                 "Jupiter": "wisdom, children, wealth, teachers", "Venus": "love, luxury, arts, spouse", "Saturn": "discipline, longevity, labour, delays", "Rahu": "ambition, foreign, technology, obsession", "Ketu": "detachment, spirituality, research, loss"}
+PLANET_NATURE = {
+    "Sun": "authority, vitality, leadership, father, executive standing",
+    "Moon": "mind, mother, emotional intelligence, peace, public rapport",
+    "Mars": "drive, courage, technical initiative, land, decisive action",
+    "Mercury": "intellect, trade, articulate speech, analytical precision, agility",
+    "Jupiter": "wisdom, expansive knowledge, children, wealth, ethical counsel",
+    "Venus": "love, marital joy, creative beauty, vehicles, refined aesthetics",
+    "Saturn": "discipline, endurance, longevity, structured labor, perseverance",
+    "Rahu": "ambition, technological innovation, foreign affairs, bold expansion",
+    "Ketu": "spiritual detachment, research, intuitive insight, karmic release"
+}
 DIG_WORD = {"exalted": "very strong", "moolatrikona": "strong", "own": "strong", "friendly": "comfortable", "neutral": "average", "enemy": "uncomfortable", "debilitated": "weak"}
 
 
@@ -660,13 +798,78 @@ def house_analysis(c: dict) -> list[dict]:
         score += sum(6 for o in occ if o in BENEFICS) - sum(5 for o in occ if o in MALEFICS and n not in UPACHAYA)
         score += sum(4 for a in asp if a in ("Jupiter", "Venus")) - sum(3 for a in asp if a in ("Saturn", "Mars", "Rahu"))
         score = max(5, min(98, score))
-        text = (f"{HOUSE_SIG[n][1]} bhava ({hh['sign']}) governs {HOUSE_SIG[n][0].lower()}. Its lord {hh['lord']} sits in house {L['house']} ({L['sign']}), {DIG_WORD[L['dignity']]}"
-                + (", combust" if L["combust"] else "") + (", retrograde" if L["retrograde"] and hh["lord"] not in ("Rahu", "Ketu") else "") + ". "
-                + (f"Occupied by {', '.join(occ)}, bringing {'; '.join(PLANET_NATURE[o] for o in occ)}. " if occ else "No occupants; results depend mainly on the lord. ")
-                + (f"Aspected by {', '.join(asp)}. " if asp else "") + f"Sarvashtakavarga {sav[n]} points ({'above' if sav[n] >= 28 else 'below'} average 28).")
+        
+        # Paragraph 1: Cosmic configuration & technical facts
+        p1 = (f"{HOUSE_SIG[n][1]} bhava ({hh['sign']}) governs {HOUSE_SIG[n][0].lower()}. "
+              f"Its lord {hh['lord']} sits in house {L['house']} ({L['sign']}, {DIG_WORD[L['dignity']]})"
+              + (", combust" if L["combust"] else "")
+              + (", retrograde" if L["retrograde"] and hh["lord"] not in ("Rahu", "Ketu") else "") + ". "
+              + (f"Occupied by {', '.join(occ)}, bringing {'; '.join(PLANET_NATURE[o] for o in occ)}. " if occ else "With no planets occupying this house, outcomes unfold primarily through its lord and incoming planetary aspects. ")
+              + (f"Aspected by {', '.join(asp)}. " if asp else "")
+              + f"Sarvashtakavarga contributes {sav[n]} points ({'above' if sav[n] >= 28 else 'below'} the neutral benchmark of 28).")
+        
+        # Paragraph 2: Everyday lived experience and practical guidance
+        theme_short = HOUSE_SIG[n][0].split(',')[0].lower()
+        if score >= 70:
+            p2 = (f"In your everyday life, this area operates as an active strength and protective anchor. You have natural confidence, ease, and resilience here, "
+                  f"enabling you to make progressive, rewarding strides when pursuing {theme_short}. "
+                  "Consistently honouring your commitments in this domain magnifies these favorable planetary blessings.")
+        elif score >= 55:
+            p2 = (f"This life area offers steady and constructive opportunities. While progress requires methodical effort and patience, "
+                  f"your foundation in {theme_short} is stable and supportive. Focus on clear priorities and avoid unnecessary rush to achieve lasting satisfaction.")
+        elif score >= 45:
+            p2 = (f"This domain presents a balanced blend of opportunities and learning curves. Experiences around {theme_short} "
+                  "will evolve over time, teaching you valuable discrimination and adaptability. Thoughtful planning and avoiding hasty reactions bring positive equilibrium.")
+        else:
+            p2 = (f"This house invites conscious care, patience, and deliberate self-discipline. Early delays or friction regarding {theme_short} "
+                  "serve as valuable training ground, strengthening your inner stamina. Traditional remedies, ethical consistency, and steady habits yield gradual, enduring turnaround.")
+        
+        text = f"{p1}\n\n{p2}"
         out.append({"house": n, "name": HOUSE_SIG[n][1], "significations": HOUSE_SIG[n][0], "sign": hh["sign"], "lord": hh["lord"], "lord_house": L["house"], "lord_dignity": L["dignity"],
                     "occupants": occ, "aspects": asp, "sav": sav[n], "score": round(score), "interpretation": text})
     return out
+
+
+def _life_area_desc(name: str, tone: str, strong: list[int], weak: list[int], houses: list[int], karakas: list[str], has_dasha: bool) -> str:
+    lead_map = {
+        "career": {
+            "excellent": "Your vocational blueprint carries exceptional cosmic support, indicating strong leadership capacity, executive standing, and progressive career advancement.",
+            "good": "Your vocational path promises steady, constructive growth. With persistent dedication to your craft and disciplined habits, professional recognition follows naturally.",
+            "mixed": "Your career journey unfolds in distinct phases of learning, adaptation, and eventual breakthrough. Balancing patience with proactive skill development leads to steady success.",
+            "challenging": "Your professional life invites resilience, patience, and deliberate focus. Early delays or career shifts serve as practical training, strengthening your craftsmanship for long-term stability."
+        },
+        "finance": {
+            "excellent": "Your financial indicators are robust, pointing to multiple avenues of earnings, intelligent resource management, and enduring accumulation of assets.",
+            "good": "Your financial prospects are solid and reliable. Steady saving, prudent budgeting, and avoiding speculative shortcuts ensure progressive wealth accumulation.",
+            "mixed": "Your financial trajectory experiences alternating cycles of expansion and expenditure. Maintaining a structured emergency fund and disciplined investing cushions temporary fluctuations.",
+            "challenging": "Financial stability calls for conscious budgeting, debt avoidance, and conservative long-term planning. Consistent, unhurried savings create durable security over time."
+        },
+        "health": {
+            "excellent": "Your foundational vitality and constitutional stamina are well supported, giving you natural physical resilience and quick recuperative powers.",
+            "good": "Your general health is favorable and stable. Maintaining regular meal timings, restful sleep, and moderate physical activity keeps your vitality balanced.",
+            "mixed": "Your constitutional equilibrium is sensitive to daily stress and lifestyle habits. Prioritizing nervous rest, balanced hydration, and mindfulness prevents physical fatigue.",
+            "challenging": "Your physical vitality requires mindful attention, regular health check-ups, and gentle preventive care. Listening to your body's early signals of exhaustion ensures enduring well-being."
+        },
+        "relationships": {
+            "excellent": "Your partnership signatures reflect harmony, mutual respect, and emotional warmth, fostering enduring companionship and collaborative joy.",
+            "good": "Your relationship dynamics are constructive and supportive. Mutual loyalty, honest communication, and shared values lay a resilient foundation for long-term happiness.",
+            "mixed": "Your relationship sphere invites conscious patience, open communication, and emotional maturity. Giving each other breathing room and avoiding hasty reactions harmonizes differences.",
+            "challenging": "Partnerships act as a primary mirror for personal growth and emotional patience. Clear expectations, compassionate listening, and avoiding pride during disagreements help navigate sensitive phases."
+        },
+        "education": {
+            "excellent": "Your intellectual faculties, conceptual grasp, and academic potential are luminous, favoring specialized mastery, higher research, and scholarly honors.",
+            "good": "Your learning journey is steady and productive. You absorb knowledge thoroughly through methodical study, practical application, and disciplined curiosity.",
+            "mixed": "Your intellectual development benefits from focused study habits and eliminating mental distractions. Engaging deeply with subjects that stir genuine passion yields the best results.",
+            "challenging": "Academic progress rewards perseverance, structured mentorship, and overcoming periodic self-doubt. Breaking complex topics into manageable daily steps ensures steady mastery."
+        }
+    }
+    lead = lead_map.get(name, {}).get(tone, "This life area unfolds progressively with balanced effort.")
+    guidance = (
+        f" Your running Mahadasha actively energizes this sphere, making this a pivotal chapter for deliberate initiative and meaningful milestones."
+        if has_dasha else
+        f" Aligning your day-to-day actions with the natural wisdom of significators {', '.join(karakas)} provides steady clarity and confidence."
+    )
+    return f"{lead}{guidance}"
 
 
 def life_areas(c: dict) -> dict:
@@ -688,9 +891,14 @@ def life_areas(c: dict) -> dict:
             ruled = [h for h in range(1, 13) if lord_of_house(c, h) == dl]
             if set(ruled) & set(houses) or P(c, dl)["house"] in houses:
                 dasha_note = f" Current {dl} Mahadasha directly activates this area."
-        summary = (f"{focus} Key houses {', '.join(map(str, houses))}; karaka(s) {', '.join(karakas)}. "
-                   + (f"Supportive: house {', '.join(map(str, strong))}. " if strong else "") + (f"Needs care: house {', '.join(map(str, weak))}. " if weak else "") + dasha_note)
-        return {"score": s, "houses": houses, "karakas": karakas, "summary": summary.strip(), "outlook": "excellent" if s >= 75 else "good" if s >= 60 else "mixed" if s >= 45 else "challenging"}
+        facts = (f"{focus} Key houses {', '.join(map(str, houses))}; karaka(s) {', '.join(karakas)}. "
+                 + (f"Supportive: house {', '.join(map(str, strong))}. " if strong else "")
+                 + (f"Needs care: house {', '.join(map(str, weak))}. " if weak else "")
+                 + dasha_note)
+        tone_label = "excellent" if s >= 75 else "good" if s >= 60 else "mixed" if s >= 45 else "challenging"
+        desc = _life_area_desc(name, tone_label, strong, weak, houses, karakas, bool(dasha_note))
+        summary = f"{facts}\n\n{desc}"
+        return {"score": s, "houses": houses, "karakas": karakas, "summary": summary.strip(), "outlook": tone_label}
 
     return {
         "career": area("career", [10, 6, 2, 11], ["Sun", "Saturn", "Mercury"], "Career is read from the 10th (status), 6th (service), 2nd/11th (earnings)."),
@@ -708,46 +916,57 @@ def remedies(c: dict) -> list[dict]:
         n = p["name"]
         reasons = []
         if p["dignity"] == "debilitated":
-            reasons.append("debilitated")
+            reasons.append("debilitated (placed in sign of minimum dignity)")
         if p["combust"]:
-            reasons.append("combust")
+            reasons.append("combust (placed too close to the Sun)")
         if n in sb and not sb[n]["strong"]:
-            reasons.append(f"Shadbala {sb[n]['rupas']}/{sb[n]['required']} rupas")
+            reasons.append(f"Shadbala strength {sb[n]['rupas']:.2f}/{sb[n]['required']} rupas (below required threshold)")
         if p["house"] in DUSTHANA and n in BENEFICS:
-            reasons.append(f"benefic in house {p['house']}")
+            reasons.append(f"natural benefic placed in dusthana (house {p['house']})")
         if n in ("Rahu", "Ketu") and p["house"] in (1, 5, 7, 9):
-            reasons.append(f"node in house {p['house']}")
+            reasons.append(f"karmic node situated in sensitive house {p['house']}")
         if not reasons:
             continue
         r = REMEDY_DB[n]
         func_benefic = any(lord_of_house(c, h) == n for h in (1, 5, 9)) and not any(lord_of_house(c, h) == n for h in (6, 8, 12))
-        out.append({"planet": n, "reasons": reasons, "gemstone": r["gem"] if func_benefic else None, "gem_note": "Gemstone advisable — planet is a functional benefic." if func_benefic else "Gemstone NOT advised (would strengthen a functional malefic); prefer mantra/charity.",
-                    "metal": r["metal"], "finger": r["finger"], "mantra": r["mantra"], "mantra_count": r["count"], "day": r["day"], "charity": r["charity"], "ritual": r["ritual"], "deity": r["deity"]})
+        gem_note = (
+            f"Advisable — as a functional benefic ruling auspicious houses, wearing {r['gem']} strengthens beneficial energies and vitality."
+            if func_benefic else
+            f"NOT advised — because {n} rules challenging houses in this chart, a gemstone would amplify difficulties. Traditional mantras, charity and mindful habits are far safer and more effective."
+        )
+        out.append({"planet": n, "reasons": reasons, "gemstone": r["gem"] if func_benefic else None, "gem_note": gem_note,
+                    "metal": r["metal"], "finger": r["finger"], "mantra": r["mantra"], "mantra_count": r["count"], "day": r["day"],
+                    "charity": r["charity"], "ritual": r["ritual"], "deity": r["deity"], "purpose": r.get("purpose", "")})
     return out
 
 
 DASHA_THEMES = {
-    "Sun": "Authority, recognition and dealings with government or father come to the fore. Good for leadership; watch ego and heart/eye health.",
-    "Moon": "Emotional life, home, mother and public interaction dominate. Travel and changes of residence are common; mind fluctuates with Moon's strength.",
-    "Mars": "Drive, competition, property and technical work. Bold initiatives succeed; avoid conflicts, accidents and haste.",
-    "Rahu": "Ambition, unconventional paths, foreign links and technology. Sudden rises possible; guard against illusion and shortcuts.",
-    "Jupiter": "Expansion through learning, children, mentors and wealth. Spiritual inclination and good counsel; avoid over-indulgence.",
-    "Saturn": "Long-term building through discipline and hard work. Delays test patience but reward perseverance; health of joints and nerves.",
-    "Mercury": "Commerce, communication, study and networking. Intellectual growth and multiple income streams; watch nervous stress.",
-    "Ketu": "Detachment, research, spirituality and endings. Material focus loosens; sudden breaks lead to inner insight.",
-    "Venus": "Relationships, comforts, arts, vehicles and luxury. Marriage and creative success likely; avoid excess.",
+    "Sun": "During the Sun Mahadasha (6 years), your life centers on vitality, authority, executive leadership, self-realization, and relations with father or government. It is a period for stepping into personal power, seeking professional recognition, and acting with noble integrity. Guard against ego clashes, impatience, and eye or cardiovascular strain; cultivate generous leadership.",
+    "Moon": "During the Moon Mahadasha (10 years), emotional life, home sanctuary, mother, public interactions, and psychological well-being take center stage. Relocations, travel near water, and family milestones are frequent. Your mindset fluctuates with the Moon's strength; cultivating emotional equanimity, a peaceful domestic environment, and mindful rest ensures a deeply nourishing phase.",
+    "Mars": "During the Mars Mahadasha (7 years), drive, physical vigor, property matters, competition, and technical enterprise come to the forefront. Bold initiatives, athletic pursuits, and courageous decisions yield high rewards. Channel this fiery vitality constructively into focused goals; avoid impulsive anger, reckless driving, or interpersonal conflicts through regular exercise and mindful restraint.",
+    "Rahu": "During the Rahu Mahadasha (18 years), ambition, unconventional paths, technological innovation, and foreign or cross-cultural connections dominate. It brings sudden surges in public visibility and material appetite. While immense worldly ascent is possible, steer clear of risky shortcuts, illusions, or shady alliances; strict ethical grounding and spiritual balance are your greatest allies.",
+    "Jupiter": "During the Jupiter Mahadasha (16 years), life expands through wisdom, higher learning, mentorship, wealth, and the blessings of children and family. Spiritual inclination and philosophical depth naturally awaken, earning you honor and benevolent counsel. Avoid over-optimism, physical over-indulgence, or complacency; sharing knowledge and practicing philanthropy magnifies your good fortune.",
+    "Saturn": "During the Saturn Mahadasha (19 years), long-term foundations are forged through discipline, perseverance, humility, and steady hard work. Initial delays or heavier responsibilities test your patience, but the rewards are enduring, rock-solid, and deeply respected. Look after bone, joint, and dental health; honour service workers, remain organized, and trust that unhurried consistency will prevail.",
+    "Mercury": "During the Mercury Mahadasha (17 years), intellect, commerce, communication, learning, and networking take the lead. You experience mental agility, opportunities for diverse income streams, writing, diplomacy, and analytical projects. Maintain mental balance through regular breaks in nature, as a non-stop active intellect can cause nervous exhaustion or worry.",
+    "Ketu": "During the Ketu Mahadasha (7 years), detachment, spiritual inquiry, research, intuition, and karmic culmination emerge. Material attachments loosen, guiding you toward introspection, esoteric studies, and letting go of outlived circumstances. Sudden turning points awaken inner clarity; embracing simplicity, yoga, and meditation transforms this into a profoundly enlightening chapter.",
+    "Venus": "During the Venus Mahadasha (20 years), relationships, aesthetic pleasures, creative arts, vehicles, and material comforts flourish. It often brings marriage, artistic accomplishments, harmonious social life, and gracious living. Strive for emotional maturity and moderate spending, channeling aesthetic sensitivities into art, harmonious design, or meaningful philanthropy.",
 }
 
 
 def dasha_interpretation(c: dict, lord: str, sub: str | None = None) -> str:
     p = P(c, lord)
     ruled = [h for h in range(1, 13) if lord_of_house(c, h) == lord]
-    txt = f"{DASHA_THEMES[lord]} In this chart {lord} is in house {p['house']} ({p['sign']}, {DIG_WORD[p['dignity']]})"
-    txt += f" and rules house(s) {', '.join(map(str, ruled))}, so {', '.join(HOUSE_SIG[h][0].split(',')[0].lower() for h in ruled + [p['house']])} are emphasised." if ruled else f", activating {HOUSE_SIG[p['house']][0].lower()}."
+    p1 = f"{DASHA_THEMES[lord]}\n\nIn your Kundli, {lord} occupies house {p['house']} ({p['sign']}, {DIG_WORD[p['dignity']]})"
+    p1 += f" and rules house(s) {', '.join(map(str, ruled))}, directing primary life momentum toward {', '.join(HOUSE_SIG[h][0].split(',')[0].lower() for h in ruled + [p['house']])}." if ruled else f", directly activating {HOUSE_SIG[p['house']][0].lower()}."
     if sub and sub != lord:
-        rel = house_from(P(c, sub)["sign_index"], p["sign_index"])
-        txt += f" Sub-period of {sub} ({'harmonious' if rel in (1, 3, 5, 9, 10, 11) else 'testing'} placement {rel} from {lord}) colours it with {PLANET_NATURE[sub]}."
-    return txt
+        sp = P(c, sub)
+        rel = house_from(sp["sign_index"], p["sign_index"])
+        rel_tone = "harmonious and mutually supportive" if rel in (1, 3, 5, 9, 10, 11) else "testing and requiring extra patience"
+        p2 = (f"The running sub-period (Antardasha) of {sub} operates in an angular relationship of {rel} houses from {lord} ({rel_tone}). "
+              f"This infuses the primary {lord} theme with {sub}'s qualities ({PLANET_NATURE[sub]}). "
+              f"Matters concerning house {sp['house']} ({sp['sign']}) come into sharp focus during this window, calling for balanced action and focused effort.")
+        return f"{p1}\n\n{p2}"
+    return p1
 
 
 # ---------- transits ----------
