@@ -90,7 +90,7 @@ class AssistantTurn(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
     role: Literal["user", "assistant"]
-    content: str = Field(min_length=1, max_length=2000)
+    content: str = Field(min_length=1, max_length=12000)  # AI answers can be long; was 2000 → follow-ups failed
 
 
 class AssistantQuestion(BaseModel):

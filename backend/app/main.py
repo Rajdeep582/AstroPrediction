@@ -1,4 +1,5 @@
 import asyncio
+import json
 import hashlib
 import secrets
 import sys
@@ -17,6 +18,7 @@ from fastapi.concurrency import run_in_threadpool
 # pyrefly: ignore[missing-import]
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import StreamingResponse
 
 # pyrefly: ignore[missing-import]
 from pymongo import ReturnDocument
@@ -28,7 +30,7 @@ if __package__ is None or __package__ == "":
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
     from backend.app import database
     from backend.app import crypto
-    from backend.app.ai import build_prompt, query_gemini
+    from backend.app import ai as ai_mod
     from backend.app.astrology import calculate_kundli
     from backend.app.config import (
         AI_PROVIDER,
@@ -42,7 +44,7 @@ if __package__ is None or __package__ == "":
 else:
     from . import database
     from . import crypto
-    from .ai import build_prompt, query_gemini
+    from . import ai as ai_mod
     from .astrology import calculate_kundli
     from .config import (
         AI_PROVIDER,
@@ -606,53 +608,98 @@ async def delete_profile(profile_id: str, user: dict = Depends(authenticated_use
         raise HTTPException(status_code=503, detail="The profile could not be fully deleted. Please retry.") from exc
 
 
+# ───────── AI Astrologer ─────────
+_ctx_cache: dict[tuple[str, str], tuple[float, str, dict]] = {}
+CTX_TTL = 1800.0
+
+
+async def _chart_context(user: dict, profile_id: str) -> tuple[str, dict]:
+    """Load the latest saved chart for a profile and build the AI briefing (cached 30 min)."""
+    key = (user["id"], profile_id)
+    hit = _ctx_cache.get(key)
+    if hit and time.monotonic() < hit[0]:
+        return hit[1], hit[2]
+    db = await require_db()
+    profile, record = await asyncio.gather(
+        db.profiles.find_one({"id": profile_id, "owner_id": user["id"]}, {"_id": 0, "name": 1}),
+        db.kundli_records.find_one({"profile_id": profile_id, "owner_id": user["id"]}, {"_id": 0, "calculation": 1}, sort=[("created_at", -1)]),
+    )
+    if not profile:
+        raise HTTPException(status_code=404, detail="That saved profile was not found.")
+    calc = (record or {}).get("calculation")
+    if not calc or not calc.get("dasha"):
+        raise HTTPException(status_code=409, detail="This profile has no full Kundli yet. Create one in the Kundli studio first.")
+    if (calc.get("analysis") or {}).get("version", 0) < 2:
+        from .analysis import build_analysis
+        calc["analysis"] = await run_in_threadpool(build_analysis, calc)
+    name = crypto.decrypt_value(profile.get("name"))
+    context = await run_in_threadpool(ai_mod.build_context, calc, name)
+    cur = calc["dasha"].get("current") or []
+    summary = {
+        "name": name, "lagna": calc["ascendant"]["sign"], "moon": calc.get("moon_sign"),
+        "nakshatra": calc["birth_nakshatra"]["name"],
+        "dasha": " / ".join(d["lord"] for d in cur[:2]),
+        "yogas": sum(1 for y in calc.get("yogas", []) if y.get("present")),
+        "facts": len(context.splitlines()),
+    }
+    _ctx_cache[key] = (time.monotonic() + CTX_TTL, context, summary)
+    if len(_ctx_cache) > 500:
+        _ctx_cache.clear()
+    return context, summary
+
+
+class AssistantPrepare(BaseModel):
+    profile_id: str = Field(min_length=1, max_length=100)
+
+
+@app.post("/api/assistant/prepare")
+async def assistant_prepare(payload: AssistantPrepare, user: dict = Depends(authenticated_user)):
+    """Study the chart up-front so questions answer immediately."""
+    _, summary = await _chart_context(user, payload.profile_id)
+    return {"ready": True, "summary": summary}
+
+
+@app.post("/api/assistant/stream")
+async def assistant_stream(payload: AssistantQuestion, user: dict = Depends(authenticated_user)):
+    context = (await _chart_context(user, payload.profile_id))[0] if payload.profile_id else None
+    history = [t.model_dump() for t in payload.history]
+    queue: asyncio.Queue = asyncio.Queue()
+    loop = asyncio.get_running_loop()
+
+    def worker():
+        try:
+            for chunk in ai_mod.stream_answer(payload.question, context, history):
+                loop.call_soon_threadsafe(queue.put_nowait, ("t", chunk))
+        except Exception as exc:  # surfaced to the client as an error event
+            loop.call_soon_threadsafe(queue.put_nowait, ("e", str(exc)))
+        finally:
+            loop.call_soon_threadsafe(queue.put_nowait, ("end", ""))
+
+    loop.run_in_executor(None, worker)
+
+    async def events():
+        while True:
+            kind, val = await queue.get()
+            if kind == "end":
+                yield "data: [DONE]\n\n"
+                return
+            yield f"data: {json.dumps({kind: val})}\n\n"
+
+    return StreamingResponse(events(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
 @app.post("/api/assistant")
 async def assistant(payload: AssistantQuestion, user: dict = Depends(authenticated_user)):
-    if AI_PROVIDER.lower() != "gemini":
-        raise HTTPException(
-            status_code=503,
-            detail=f"AI_PROVIDER '{AI_PROVIDER}' is not implemented. Configure AI_PROVIDER=gemini.",
-        )
-
-    profile = None
-    calculation = None
-
-    if payload.profile_id:
-        db = await require_db()
-        profile = await db.profiles.find_one(
-            {"id": payload.profile_id, "owner_id": user["id"]}, {"_id": 0}
-        )
-        if not profile:
-            raise HTTPException(status_code=404, detail="That saved profile was not found.")
-        latest_record = await db.kundli_records.find_one(
-            {"profile_id": payload.profile_id, "owner_id": user["id"]},
-            sort=[("created_at", -1)],
-        )
-        if not latest_record:
-            raise HTTPException(
-                status_code=409,
-                detail="This profile has no saved calculation yet. Create a Kundli before asking chart-specific questions.",
-            )
-        calculation = latest_record.get("calculation") or latest_record.get("chart")
-        if not calculation:
-            raise HTTPException(
-                status_code=409,
-                detail="The saved record has no verified calculation output to provide as context.",
-            )
-
-    prompt = build_prompt(payload.question, calculation=calculation)
-    history = [turn.model_dump() for turn in payload.history]
+    context = (await _chart_context(user, payload.profile_id))[0] if payload.profile_id else None
+    history = [t.model_dump() for t in payload.history]
     try:
-        answer = await run_in_threadpool(query_gemini, prompt, history)
-        return {
-            "answer": answer,
-            "profile_id": payload.profile_id,
-            "context_used": bool(calculation),
-        }
+        text = await run_in_threadpool(ai_mod.answer, payload.question, context, history)
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"AI service error: {exc}") from exc
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return {"answer": text, "profile_id": payload.profile_id, "context_used": bool(context)}
 
 
 if __name__ == "__main__":

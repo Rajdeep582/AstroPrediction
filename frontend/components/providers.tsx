@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode, useLayoutEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, Info, TriangleAlert, X } from "lucide-react";
 import { api } from "@/lib/api";
@@ -24,6 +24,8 @@ export function useAuth() {
   if (!ctx) throw new Error("useAuth outside provider");
   return ctx;
 }
+
+const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 const USER_CACHE_KEY = "jyotish_cached_user";
 
@@ -49,8 +51,14 @@ function setCachedUser(u: Account | null) {
 }
 
 function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<Account | null>(getCachedUser);
-  const [loading, setLoading] = useState<boolean>(() => !getCachedUser());
+  // Same initial render on server and client (avoids hydration mismatch); the cached user is
+  // applied in a layout effect, which runs before the browser paints, so it still feels instant.
+  const [user, setUser] = useState<Account | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  useIsoLayoutEffect(() => {
+    const cached = getCachedUser();
+    if (cached) { setUser(cached); setLoading(false); }
+  }, []);
 
   const refresh = useCallback(async () => {
     try {

@@ -23,6 +23,6 @@ FRONTEND_ORIGINS = [x.strip() for x in setting("FRONTEND_ORIGINS", "http://local
 SWISSEPH_EPHE_PATH = setting("SWISSEPH_EPHE_PATH")
 SESSION_HTTPS_ONLY = setting("SESSION_HTTPS_ONLY", "false").lower() == "true"
 AI_PROVIDER = setting("AI_PROVIDER", "gemini")
-AI_MODEL = setting("AI_MODEL", "gemini-3.6-flash")
+AI_MODEL = setting("AI_MODEL", "gemini-3.1-flash-lite")
 GEMINI_API_KEY = setting("GEMINI_API_KEY") or setting("AI_API_KEY") or setting("GOOGLE_API_KEY")
 DATA_ENCRYPTION_KEY = setting("DATA_ENCRYPTION_KEY")

@@ -16,3 +16,4 @@ venv/
 .claude/
 .ruff_cache/
 *.tsbuildinfo
+.next-dev/

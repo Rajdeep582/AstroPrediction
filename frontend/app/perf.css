@@ -48,3 +48,10 @@ a, button, [role="tab"], .nav-item { touch-action: manipulation; -webkit-tap-hig
   .bottom-nav { padding-bottom: max(6px, env(safe-area-inset-bottom)); }
 }
 @supports (height: 100dvh) { .auth-split, .center-page { min-height: 100dvh; } }
+
+/* Cards size to their own content instead of stretching to the tallest box in the row */
+.an-grid, .an-grid.two, .km-grid, .dash-grid, .area-grid, .remedy-grid, .module-grid, .grid-2, .grid-3, .kv, .summary, .yoga-grid { align-items: start; }
+.an-card, .dash-grid > *, .area-grid > *, .remedy-grid > * { height: auto; align-self: start; }
+.learn { align-items: start; }
+/* Placeholder: compact card that fits its message instead of a fixed 520px tall box */
+.placeholder-card { min-height: 0 !important; padding: 40px 24px; }

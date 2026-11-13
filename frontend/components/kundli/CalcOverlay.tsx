@@ -24,10 +24,12 @@ const LINES: [number, number][] = [[0, 7], [7, 1], [0, 2], [1, 4], [2, 3], [3, 4
  * Full-screen "analysing" sequence. Steps advance on a timer; the final step waits for `ready`
  * (the API result), then a completion glow plays and `onDone` fires.
  */
-export default function CalcOverlay({ ready, onDone, name }: { ready: boolean; onDone: () => void; name?: string }) {
+export default function CalcOverlay({ ready, onDone, name, steps = CALC_STEPS, title, doneTitle, sub, doneSub }: {
+  ready: boolean; onDone: () => void; name?: string; steps?: string[]; title?: string; doneTitle?: string; sub?: string; doneSub?: string;
+}) {
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
-  const last = CALC_STEPS.length - 1;
+  const last = steps.length - 1;
 
   useEffect(() => {
     if (step >= last) return;
@@ -49,7 +51,7 @@ export default function CalcOverlay({ ready, onDone, name }: { ready: boolean; o
   }, [done]);
 
   const lit = done ? STARS.length : Math.min(step, STARS.length);
-  const pct = done ? 100 : Math.round((step / CALC_STEPS.length) * 100);
+  const pct = done ? 100 : Math.round((step / steps.length) * 100);
 
   if (typeof document === "undefined") return null;
   return createPortal(
@@ -78,10 +80,10 @@ export default function CalcOverlay({ ready, onDone, name }: { ready: boolean; o
             {STARS.map(([x, y], i) => <circle key={i} className={`calc-star${i < lit ? " lit" : ""}`} cx={x} cy={y} r={i === 0 || i === 6 ? 4 : 2.8} />)}
           </svg>
         </div>
-        <h2>{done ? "Your Kundli is ready" : "Reading the sky at your birth"}</h2>
-        <p className="muted small" style={{ margin: 0 }}>{done ? "Opening your analysis…" : name ? `Calculating ${name}'s chart with Swiss Ephemeris` : "Calculating with Swiss Ephemeris"}</p>
+        <h2>{done ? (doneTitle ?? "Your Kundli is ready") : (title ?? "Reading the sky at your birth")}</h2>
+        <p className="muted small" style={{ margin: 0 }}>{done ? (doneSub ?? "Opening your analysis…") : sub ? sub : name ? `Calculating ${name}'s chart with Swiss Ephemeris` : "Calculating with Swiss Ephemeris"}</p>
         <ul className="calc-steps">
-          {CALC_STEPS.map((s, i) => {
+          {steps.map((s, i) => {
             const state = done || i < step ? "ok" : i === step ? "active" : "";
             return <li key={s} className={state}><span className="dot">{state === "ok" ? "✓" : ""}</span>{s}</li>;
           })}

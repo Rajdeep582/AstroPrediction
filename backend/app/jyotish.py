@@ -10,6 +10,7 @@ from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+# pyrefly: ignore[missing-import]
 import swisseph as swe
 
 try:
