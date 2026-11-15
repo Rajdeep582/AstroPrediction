@@ -93,7 +93,7 @@ html[data-reduce-motion="true"] .page-enter { animation: none; }
 /* ───────── Focused, consistent mobile layout ─────────
    Same geography on every page: bordered header panel → cards, in one centred column. */
 @media (max-width: 768px) {
-  .content > .page-enter, .landing { max-width: 560px; margin-inline: auto; }
+  .content > .page-view, .landing { max-width: 560px; margin-inline: auto; }
 
   /* every page header becomes a bordered panel */
   .page-head { padding: 20px 18px !important; margin-bottom: 16px !important; border-radius: 18px; border: 1px solid var(--line);
@@ -139,4 +139,84 @@ body { max-width: none !important; } /* 100vw includes the scrollbar on desktop 
   .auth-side { grid-template-rows: auto 1fr; align-content: start; gap: 14px; padding: 0 !important; }
   .back-link { position: static !important; justify-self: start; min-height: 44px; padding: 0 4px; color: var(--gold-hi) !important; }
   .auth-panel { align-self: center; }
+}
+
+/* ═════════ Real-device form fixes ═════════
+   iOS Safari / some Android browsers give date & time inputs an intrinsic min-width that ignores width:100%
+   and pushes them past the screen edge. Normalise every field. */
+input, select, textarea { max-width: 100%; min-width: 0; box-sizing: border-box; }
+.ffield, .grid-2 > *, .grid-3 > *, .form-card > *, .kundli-form, .kundli-result { min-width: 0; }
+.ffield input[type="date"], .ffield input[type="time"] {
+  -webkit-appearance: none; appearance: none; display: block; width: 100%; min-width: 0; min-height: 54px; text-align: left; }
+input[type="date"]::-webkit-date-and-time-value, input[type="time"]::-webkit-date-and-time-value { text-align: left; margin: 0; }
+input[type="date"]::-webkit-calendar-picker-indicator, input[type="time"]::-webkit-calendar-picker-indicator { margin-left: auto; opacity: .8; filter: invert(.8) sepia(.4); }
+
+@media (max-width: 768px) {
+  /* ── one top bar everywhere: brand left, one action right, sticky ── */
+  .mobile-top, .land-nav, .auth-top {
+    position: sticky !important; top: 0; z-index: 30; display: flex !important; align-items: center; justify-content: space-between; gap: 10px;
+    height: 58px; padding: 0 var(--gutter) !important; margin: 0 calc(-1 * var(--gutter)) !important; padding-top: env(safe-area-inset-top) !important;
+    background: rgba(7,8,18,.92) !important; border-bottom: 1px solid var(--line-soft); backdrop-filter: blur(12px); }
+  .mobile-top { margin: 0 !important; }
+  .land-nav nav > a:not(.btn) { display: none !important; }
+  .mobile-top .brand small, .land-nav .brand small, .auth-top .brand small { display: none; }
+  .mobile-top .brand strong, .land-nav .brand strong, .auth-top .brand strong { font-size: 18px; }
+  .mobile-top .btn, .land-nav .btn, .auth-top .btn { min-height: 38px; padding: 0 14px; font-size: 13.5px; }
+  .auth-top { width: calc(100% + 2 * var(--gutter)); }
+  .back-link { display: none !important; }
+  .auth-split { padding-top: 0 !important; place-items: start center !important; }
+  .auth-side { gap: 22px !important; width: 100%; }
+  .auth-panel { margin-top: 6px; }
+
+  /* ── compact, app-style page headers (not article headlines) ── */
+  .page-head { padding: 14px 16px !important; margin-bottom: 14px !important; gap: 10px !important; }
+  .page-head .eyebrow { font-size: 10px; margin-bottom: 4px !important; }
+  .page-head .display { font-size: 24px !important; line-height: 1.15; }
+  .page-head .lede { font-size: 13.5px !important; line-height: 1.5; margin-top: 6px !important; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .page-actions .btn { min-height: 42px; }
+  .content { padding-top: 14px !important; }
+  .stack, .an-body { gap: 14px !important; }
+  .card-title { font-size: 19px !important; }
+
+  /* Kundli form: tight, focused card */
+  .kundli-layout { gap: 14px !important; }
+  .kundli-form .glass { padding: 16px 14px !important; }
+  .kundli-form .card-head { margin-bottom: 10px; }
+  .loc-map { height: 240px !important; }
+  .loc-search { padding-left: 40px; }
+  .loc-locate { padding: 10px; }
+}
+
+/* ═════════ Tablets (portrait 768–1024) ═════════ */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .content { padding: 26px 24px 60px !important; }
+  .kundli-layout { grid-template-columns: 1fr !important; max-width: 760px; margin: 0 auto; }
+  .chart-layout, .two-col { grid-template-columns: 1fr !important; }
+  .dash-grid { grid-template-columns: 1fr 1fr !important; }
+  .an { grid-template-columns: 1fr !important; }
+  .an-nav { position: sticky; top: 0; z-index: 20; display: flex !important; overflow-x: auto; border-radius: 0 0 14px 14px; scrollbar-width: none; }
+  .an-nav::-webkit-scrollbar { display: none; }
+  .an-nav a { white-space: nowrap; }
+  .an-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .ai-hero { grid-template-columns: 220px minmax(0, 1fr) !important; padding: 28px !important; }
+  .hero { grid-template-columns: 1fr !important; min-height: 0 !important; max-width: 720px; margin: 0 auto; }
+  .feature-grid { grid-template-columns: 1fr 1fr !important; }
+  .page-head .display { font-size: 32px; }
+}
+@media (min-width: 769px) {
+  .auth-top { position: absolute; top: 22px; left: 22px; right: 22px; display: flex; justify-content: flex-start; }
+  .auth-top .brand { display: none; }
+}
+
+/* Grid/flex children must be allowed to shrink below their content's intrinsic width,
+   otherwise inputs (default ~20ch) and selects (longest option) push past the screen. */
+.loc { grid-template-columns: minmax(0, 1fr) !important; min-width: 0; width: 100%; }
+.loc-search { min-width: 0; width: 100%; }
+.loc-search input { flex: 1 1 0 !important; width: 100% !important; min-width: 0 !important; }
+.loc-map { width: 100%; }
+.glass, .kundli-form .glass { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 860px) {
+  .ai-hero { grid-template-columns: minmax(0, 1fr) !important; }
+  .ai-hero-copy { min-width: 0; width: 100%; }
+  .ai-start-row select { flex: 1 1 100% !important; width: 100%; min-width: 0; }
 }

@@ -119,7 +119,7 @@ export default function SignInPage() {
         <div className="orbit o1" /><div className="orbit o2" /><div className="orbit o3" />
       </section>
       <section className="auth-side">
-        <Link href="/" className="back-link"><ArrowLeft size={15} /> Home</Link>
+        <header className="auth-top"><Brand /><Link href="/" className="btn btn-ghost btn-sm"><ArrowLeft size={15} /> Home</Link></header>
         <Suspense fallback={<div className="auth-panel glass" />}><AuthForm /></Suspense>
       </section>
     </div>

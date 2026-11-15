@@ -30,7 +30,7 @@ export default function Landing() {
         <Brand />
         <nav aria-label="Main">
           <Link href="/learn">Learn</Link>
-          <Link href="/kundli" className="nav-keep">Free Kundli</Link>
+          <Link href="/kundli">Free Kundli</Link>
           {user ? <Link href="/dashboard" className="btn btn-gold btn-sm">Dashboard</Link> : <Link href="/signin" className="btn btn-ghost btn-sm">Sign in</Link>}
         </nav>
       </header>

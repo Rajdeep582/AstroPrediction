@@ -1,0 +1,41 @@
+/* ═════════ Scroll performance (loaded last) ═════════ */
+
+/* 1. No backdrop blur on anything that content scrolls underneath: the blur would be recomputed every
+      frame. Near-opaque fills give the same look. */
+.mobile-top, .land-nav, .auth-top, .bottom-nav, .loc-list, .loc-chip, .an-nav, .sheet, .sheet-scrim, .toast {
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+.mobile-top, .land-nav, .auth-top { background: rgba(8,8,20,.97) !important; }
+.bottom-nav { background: rgba(14,14,32,.98) !important; }
+
+/* 2. Fixed/sticky bars on their own GPU layer → never repainted while the page moves under them. */
+.mobile-top, .land-nav, .auth-top, .bottom-nav, .an-nav, .route-bar { transform: translateZ(0); will-change: transform; backface-visibility: hidden; }
+.sky, .sky > *, .constellations { transform: translateZ(0); backface-visibility: hidden; }
+
+/* 3. While actively scrolling, pause decorative loops that repaint pixels every frame
+      (gradient text, rotating borders, orb swirl, twinkle). They resume the moment scrolling stops. */
+html.is-scrolling .display, html.is-scrolling .hero-title, html.is-scrolling .section-title,
+html.is-scrolling .glass::before, html.is-scrolling .btn-gold, html.is-scrolling .loc-locate,
+html.is-scrolling .stars-1, html.is-scrolling .stars-2, html.is-scrolling .nebula, html.is-scrolling .halo, html.is-scrolling .orbit,
+html.is-scrolling .orb-glow, html.is-scrolling .orb-swirl, html.is-scrolling .orb-stars, html.is-scrolling .orb-ring,
+html.is-scrolling .astro-pin-pulse, html.is-scrolling .skeleton { animation-play-state: paused !important; }
+/* hover effects shouldn't fire as cards slide under a resting pointer mid-scroll */
+html.is-scrolling .glass, html.is-scrolling .an-card, html.is-scrolling .feature, html.is-scrolling .module, html.is-scrolling .profile { pointer-events: none; }
+
+/* 4. Touch devices: lighter shadows (huge blur radii are expensive to rasterise as new cards scroll in). */
+@media (hover: none), (max-width: 768px) {
+  .glass, .an-card, .feature, .tbl-cards tr, .page-head, .hero-copy {
+    box-shadow: 0 8px 22px -12px rgba(0,0,0,.75), 0 0 0 1px rgba(233,199,125,.05) inset !important; }
+  .btn-gold { box-shadow: 0 6px 18px -8px rgba(226,184,102,.7) !important; }
+  .display, .hero-title, .section-title { filter: none !important; }
+  .loc-map { box-shadow: 0 0 0 1px rgba(139,123,216,.3) !important; }
+}
+
+/* 5. Images / heavy SVG charts: decode off the main thread and skip paint when far offscreen. */
+img { content-visibility: auto; }
+
+/* 6. Phones/tablets: fewer full-screen layers to composite every frame (fill-rate is the bottleneck on
+      mobile GPUs). The faintest star layer and nebula haze go; main stars, twinkle and constellations stay. */
+@media (hover: none) {
+  .stars-2, .nebula { display: none !important; }
+  body::before { opacity: .45; }
+}

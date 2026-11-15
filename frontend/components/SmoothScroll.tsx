@@ -27,7 +27,14 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
     const reduce = prefs.reduceMotion || document.documentElement.dataset.perf === "low" || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce) return;
     // lerp-based smoothing responds instantly and settles fast; touch stays native (best on phones)
-    const l = new Lenis({ lerp: 0.2, smoothWheel: true, wheelMultiplier: 1, syncTouch: false, touchMultiplier: 1 });
+    const l = new Lenis({ lerp: 0.18, smoothWheel: true, wheelMultiplier: 1, syncTouch: false, touchMultiplier: 1 });
+    // Trackpads already deliver smooth, inertial deltas → follow them closely (snappy, no float).
+    // Notched mouse wheels jump in big steps → glide them a little more.
+    const onWheel = (e: WheelEvent) => {
+      const trackpad = e.deltaMode === 0 && (Math.abs(e.deltaY) < 40 || !Number.isInteger(e.deltaY));
+      l.options.lerp = trackpad ? 0.38 : 0.16;
+    };
+    window.addEventListener("wheel", onWheel, { passive: true });
     let raf = 0;
     const loop = (t: number) => { l.raf(t); raf = requestAnimationFrame(loop); };
     raf = requestAnimationFrame(loop);
@@ -35,16 +42,22 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
     // keep Lenis' idea of the page height in sync with real content (route changes, expanding cards, images)
     const ro = new ResizeObserver(() => l.resize());
     ro.observe(document.body);
-    return () => { ro.disconnect(); cancelAnimationFrame(raf); l.destroy(); setLenis(null); };
+    return () => { window.removeEventListener("wheel", onWheel); ro.disconnect(); cancelAnimationFrame(raf); l.destroy(); setLenis(null); };
   }, [prefs.reduceMotion]);
 
   // Cheap scrolling flag (a JS variable, not a class: toggling a root class restyles the whole page).
   useEffect(() => {
     const w = window as Window & { __scrolling?: boolean };
     let t: ReturnType<typeof setTimeout> | undefined;
-    const on = () => { w.__scrolling = true; clearTimeout(t); t = setTimeout(() => { w.__scrolling = false; }, 140); };
+    const root = document.documentElement;
+    // class toggles only at the start and end of a gesture (2 style updates), never per frame
+    const on = () => {
+      if (!w.__scrolling) { w.__scrolling = true; root.classList.add("is-scrolling"); }
+      clearTimeout(t);
+      t = setTimeout(() => { w.__scrolling = false; root.classList.remove("is-scrolling"); }, 160);
+    };
     window.addEventListener("scroll", on, { passive: true });
-    return () => { window.removeEventListener("scroll", on); clearTimeout(t); w.__scrolling = false; };
+    return () => { window.removeEventListener("scroll", on); clearTimeout(t); w.__scrolling = false; root.classList.remove("is-scrolling"); };
   }, []);
 
   return <LenisCtx.Provider value={lenis}>{children}<Suspense fallback={null}><RouteEffects lenis={lenis} /></Suspense></LenisCtx.Provider>;
