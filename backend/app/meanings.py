@@ -471,6 +471,13 @@ DIGNITY_NOTE: dict[str, str] = {
     "debilitated": "In its sign of debilitation, the planet's natural expression is strained or inverted. The cautions listed require extra mindfulness, and supportive remedies bring significant balance.",
 }
 
+ORD = {1: "1st", 2: "2nd", 3: "3rd"}
+
+
+def ordn(n: int) -> str:
+    return ORD.get(n, f"{n}th")
+
+
 HOUSE_PLAIN: dict[int, str] = {
     1: "your physical vitality, personal presence, self-confidence and overall life direction",
     2: "earned wealth, family heritage, food habits and the power of your spoken word",
@@ -486,28 +493,91 @@ HOUSE_PLAIN: dict[int, str] = {
     12: "expenses, foreign travel, restorative solitude, sleep and spiritual liberation",
 }
 
+HOUSE_MEANING_LEAD: dict[int, dict[str, str]] = {
+    1: {
+        "excellent": "Your 1st house stands as a luminous pillar of vitality, self-confidence, and clear personal purpose, allowing you to direct your life with calm composure.",
+        "favourable": "Your 1st house provides a stable, constructive anchor for your health and self-expression, supporting steady personal growth.",
+        "mixed": "Your 1st house reflects an evolving relationship with personal confidence and vitality, rewarding mindful daily habits and balanced pacing.",
+        "challenging": "Your 1st house invites conscious patience and self-care, helping you forge genuine inner resilience through real-life experience.",
+    },
+    2: {
+        "excellent": "Your 2nd house acts as a well-protected reservoir of financial intelligence, family heritage, and dignified speech.",
+        "favourable": "Your 2nd house supports steady wealth accumulation and domestic stability through prudent budgeting and dependable speech.",
+        "mixed": "Your 2nd house experiences natural cycles of saving and spending, encouraging transparency and thoughtful financial planning.",
+        "challenging": "Your 2nd house calls for disciplined financial conservatism, avoiding speculative shortcuts, and gentle speech during disagreements.",
+    },
+    3: {
+        "excellent": "Your 3rd house endows you with outstanding courage, entrepreneurial initiative, and persuasive communicative flair.",
+        "favourable": "Your 3rd house supports reliable self-effort, hands-on skill development, and constructive bonds with peers and siblings.",
+        "mixed": "Your 3rd house benefits from focused channelization, helping you direct your creative energy into tangible milestones.",
+        "challenging": "Your 3rd house encourages building self-made confidence step by step, transforming early hesitations into enduring determination.",
+    },
+    4: {
+        "excellent": "Your 4th house creates an emotionally blessed sanctuary of domestic harmony, peace of mind, and property security.",
+        "favourable": "Your 4th house provides a comforting and reliable home environment, supporting your inner emotional stability.",
+        "mixed": "Your 4th house invites conscious boundary-keeping against external stress to preserve your domestic peace of mind.",
+        "challenging": "Your 4th house asks for emotional maturity and patience, nurturing an inner sanctuary that remains steady through life's changes.",
+    },
+    5: {
+        "excellent": "Your 5th house is a luminous center of creative intelligence, intuitive foresight, and fulfilling mentorship.",
+        "favourable": "Your 5th house supports constructive intellectual development, sound judgment, and rewarding creative expressions.",
+        "mixed": "Your 5th house balances creative passion with practical follow-through, keeping your intellectual pursuits productive.",
+        "challenging": "Your 5th house rewards dedicated study, structured mentorship, and overcoming self-doubt to master complex subjects.",
+    },
+    6: {
+        "excellent": "Your 6th house bestows formidable problem-solving stamina, biological resistance, and the ability to outwork rivals.",
+        "favourable": "Your 6th house provides steady workplace discipline and reliable health resistance through methodical habits.",
+        "mixed": "Your 6th house asks for mindful pacing between demanding duties and restorative rest to prevent unnecessary fatigue.",
+        "challenging": "Your 6th house calls for patient resilience, structured daily health habits, and conservative debt management.",
+    },
+    7: {
+        "excellent": "Your 7th house brings exceptional grace, mutual respect, and shared prosperity to your marriage and public partnerships.",
+        "favourable": "Your 7th house fosters constructive, loyal collaborations and a cooperative foundation for long-term domestic harmony.",
+        "mixed": "Your 7th house invites open dialogue, emotional maturity, and mutual space to harmonize differing perspectives.",
+        "challenging": "Your 7th house serves as a sacred classroom for cultivating patience, unselfish listening, and dissolving pride in relationships.",
+    },
+    8: {
+        "excellent": "Your 8th house confers deep psychological resilience, investigative genius, and the power to emerge renewed from transitions.",
+        "favourable": "Your 8th house supports steady endurance, research depth, and responsible stewardship of shared assets.",
+        "mixed": "Your 8th house suggests transparent financial agreements and emotional flexibility during unexpected life adjustments.",
+        "challenging": "Your 8th house invites absolute ethical integrity, health-consciousness, and spiritual calm when navigating major changes.",
+    },
+    9: {
+        "excellent": "Your 9th house is an auspicious beacon of higher wisdom, moral clarity, and benevolent guidance from mentors.",
+        "favourable": "Your 9th house provides a dependable ethical compass, supporting higher education, travel, and principled achievement.",
+        "mixed": "Your 9th house encourages integrating inherited traditions with your own lived insights and open-minded inquiry.",
+        "challenging": "Your 9th house asks for perseverance, humility, and steadfast principles, allowing your good fortune to mature steadily.",
+    },
+    10: {
+        "excellent": "Your 10th house commands outstanding professional authority, organizational leadership, and an honorable public reputation.",
+        "favourable": "Your 10th house ensures constructive career advancement through loyal craftsmanship and dependable responsibility.",
+        "mixed": "Your 10th house unfolds through distinct chapters of professional learning, balancing patience with purposeful initiative.",
+        "challenging": "Your 10th house rewards long-term dedication, perseverance through workplace politics, and unhurried mastery of your craft.",
+    },
+    11: {
+        "excellent": "Your 11th house powerfully supports the realization of major ambitions, diverse revenue avenues, and influential allies.",
+        "favourable": "Your 11th house provides reliable income growth and constructive friendships built on shared, practical goals.",
+        "mixed": "Your 11th house balances social networking with discernment, helping you cultivate authentic, value-aligned connections.",
+        "challenging": "Your 11th house teaches steady persistence and cautious vetting of associates to build lasting material gains.",
+    },
+    12: {
+        "excellent": "Your 12th house offers a deeply enriching inner life, spiritual peace in restorative solitude, and fruitful foreign links.",
+        "favourable": "Your 12th house supports balanced expenditures, calm mental rest, and thoughtful engagement with philanthropic interests.",
+        "mixed": "Your 12th house reminds you to maintain consistent sleep habits and mindful budgeting to protect your energy and resources.",
+        "challenging": "Your 12th house invites peaceful contemplation, letting go of past burdens, and finding renewal in quiet, selfless service.",
+    },
+}
+
 
 def house_meaning(n: int, score: int, lord: str, lord_house: int, occupants: list[str]) -> str:
-    area = HOUSE_PLAIN[n]
-    if score >= 70:
-        lead = (f"This area of your life — governing {area} — stands as a primary strength in your Kundli. "
-                "Conditions here are supportive, allowing you to build lasting results with confidence.")
-    elif score >= 55:
-        lead = (f"This area of life — {area} — is generally stable and cooperative. "
-                "Progress unfolds steadily with consistent, disciplined effort.")
-    elif score >= 45:
-        lead = (f"This area — governing {area} — carries a balanced mix of opportunity and growth lessons. "
-                "Some aspects will thrive naturally, while others reward patience and thoughtful planning.")
-    else:
-        lead = (f"This area of life — {area} — invites conscious care and dedication. "
-                "Early challenges or delays here are designed to develop resilience, and remedies help smooth the way.")
-
+    tier = "excellent" if score >= 70 else "favourable" if score >= 55 else "mixed" if score >= 45 else "challenging"
+    lead = HOUSE_MEANING_LEAD.get(n, {}).get(tier, f"Your {ordn(n)} house ({HOUSE_PLAIN[n]}) operates on a {tier} footing.")
     target_theme = HOUSE_PLAIN[lord_house].split(" — ")[0].split(",")[0]
-    link = f" Because its governing planet ({lord}) is situated in the domain of {target_theme}, the outcomes here are intimately tied to how you handle that part of your life."
+    link = f" Because its governing planet ({lord}) is situated in the {ordn(lord_house)} house ({target_theme}), matters here are intimately tied to how you direct energy in that part of your life."
     occ = ""
     if occupants:
-        occ = f" The presence of {', '.join(occupants)} directly colours the atmosphere here with their energetic qualities."
-    return lead + link + occ
+        occ = f" The presence of {', '.join(occupants)} directly enlivens this house with their energetic qualities."
+    return f"{lead}{link}{occ}"
 
 
 DOSHA_PLAIN: dict[str, tuple[str, str]] = {
@@ -551,13 +621,77 @@ def yoga_meaning(category: str, name: str) -> str:
             f"when the planets that form them run their corresponding Mahadasha and Antardasha periods.")
 
 
+DASHA_LORD_ESSENCE: dict[str, str] = {
+    "Sun": "Under the Sun's governance, your life vitality, personal authority, executive ambition, and public reputation take center stage. You are invited to lead with nobility, act with transparency, and take ownership of your life direction.",
+    "Moon": "Under the Moon's gentle guidance, emotional fulfillment, domestic peace of mind, family connections, and public goodwill become your main priorities. It is a nurturing phase that rewards emotional maturity, intuitive clarity, and creating a supportive sanctuary.",
+    "Mars": "Under Mars's energetic influence, courage, decisive initiative, technical enterprise, and competitive determination drive your daily life. Channeling this fiery momentum into clear, disciplined goals brings tangible breakthroughs.",
+    "Mercury": "Under Mercury's intellectual sway, communication, analytical commerce, learning, and versatile networking become your primary assets. It is a dynamic phase for mental agility, expanding your skills, and building collaborative bridges.",
+    "Jupiter": "Under Jupiter's benevolent presence, wisdom, higher learning, mentorship, ethical prosperity, and family milestones flourish. It is an expansive chapter that rewards moral integrity, philosophical depth, and sharing knowledge generously.",
+    "Venus": "Under Venus's gracious influence, relationship harmony, artistic creativity, material comforts, and gracious living take priority. It is a socially rewarding period that invites you to cultivate emotional refinement and meaningful partnerships.",
+    "Saturn": "Under Saturn's disciplined watch, enduring foundations are forged through perseverance, methodical hard work, and structural maturity. While demands may feel heavy, unhurried consistency and patient duty lead to unshakeable, lasting authority.",
+    "Rahu": "Under Rahu's ambitious impulse, innovative breakthroughs, foreign or unconventional connections, and rapid expansion dominate. Keeping your ambitions anchored in strict ethics and clear judgment transforms this into a chapter of remarkable rise.",
+    "Ketu": "Under Ketu's contemplative influence, spiritual inquiry, research, intuitive clarity, and inner liberation come to the forefront. Letting go of outlived habits and cultivating quiet wisdom make this a profoundly enlightening chapter.",
+}
+
+
 def dasha_plain(lord: str, tone: str, houses: list[int]) -> str:
     areas = ", ".join(HOUSE_PLAIN[h].split(" — ")[0].split(",")[0] for h in houses[:3])
-    feel = {
-        "excellent": "This is one of the most productive, rewarding chapters in your chart's timeline",
-        "favourable": "Overall, this is an encouraging and supportive phase for steady progress",
-        "mixed": "This chapter brings a dynamic combination of opportunity and character-building lessons",
-        "challenging": "This period calls for patience, measured choices, and deliberate care",
-    }.get(tone, "This period initiates significant change and growth")
-    return (f"{feel}. The primary momentum of your life shifts toward {areas}. "
-            f"Use this window to take strategic, ethical steps in these domains, and refer to the cautions to steer clear of avoidable missteps.")
+    essence = DASHA_LORD_ESSENCE.get(lord, f"This period energizes the core qualities of {lord}.")
+    lord_tone_advice = {
+        "Sun": {
+            "excellent": f"With solar vitality at its peak, your path toward {areas} unfolds with clear authority and public respect.",
+            "favourable": f"Steady solar support helps you build confidence and earn recognition around {areas} through honorable contribution.",
+            "mixed": f"Balancing self-assertion with humility helps you resolve periodic friction and make progress across {areas}.",
+            "challenging": f"Patience with authority figures and mindful stress management ensure that you navigate lessons in {areas} successfully.",
+        },
+        "Moon": {
+            "excellent": f"Gentle lunar grace enriches your domestic peace and brings intuitive harmony to {areas}.",
+            "favourable": f"A supportive emotional baseline allows you to make consistent, heartfelt progress in matters of {areas}.",
+            "mixed": f"Cultivating emotional equanimity helps you navigate natural cycles of feeling and sustain focus on {areas}.",
+            "challenging": f"Mindful self-care and grounding routines protect your vitality and bring stability to sensitive phases in {areas}.",
+        },
+        "Mars": {
+            "excellent": f"Dynamic Martian drive empowers you to overcome hurdles and achieve decisive breakthroughs in {areas}.",
+            "favourable": f"Focused courage and technical initiative yield tangible, earned advancements around {areas}.",
+            "mixed": f"Channeling restlessness into structured physical and mental goals prevents avoidable conflict and advances {areas}.",
+            "challenging": f"Patient restraint, regular exercise, and measured speech help you steer through high-energy friction around {areas}.",
+        },
+        "Mercury": {
+            "excellent": f"Luminous analytical clarity and commercial eloquence open rewarding opportunities across {areas}.",
+            "favourable": f"Mental agility and versatile networking provide steady, reliable momentum for {areas}.",
+            "mixed": f"Prioritizing deep focus over scattered multitasking preserves your mental energy and produces solid results in {areas}.",
+            "challenging": f"Periodic breaks in quiet settings help calm nervous fatigue and keep your decisions clear around {areas}.",
+        },
+        "Jupiter": {
+            "excellent": f"Expansive spiritual wisdom and noble counsel bring abundant blessings and honorable growth to {areas}.",
+            "favourable": f"Ethical clarity and sound judgment ensure steady, constructive progress in your pursuit of {areas}.",
+            "mixed": f"Balancing optimism with realistic planning protects your resources and brings positive equilibrium to {areas}.",
+            "challenging": f"Humility, moderate living, and seeking counsel from wise elders help smooth the way during demanding chapters in {areas}.",
+        },
+        "Venus": {
+            "excellent": f"Aesthetic charm and relational grace flourish, bringing joyful companionship and refined comforts to {areas}.",
+            "favourable": f"Harmonious social collaborations and creative pursuits create steady, pleasant advancement across {areas}.",
+            "mixed": f"Conscious financial budgeting and emotional maturity prevent unnecessary overspending and harmonize {areas}.",
+            "challenging": f"Looking beyond surface appearances and practicing relationship patience help you resolve sensitive lessons in {areas}.",
+        },
+        "Saturn": {
+            "excellent": f"Rock-solid endurance and methodical craftsmanship build enduring, highly respected foundations around {areas}.",
+            "favourable": f"Disciplined consistency and unhurried effort yield steady, durable progress in the domain of {areas}.",
+            "mixed": f"Accepting heavier responsibilities with patient resolve transforms early hurdles into earned competence in {areas}.",
+            "challenging": f"Perseverance, humble service, and caring for bodily stamina gradually build unshakeable strength through trials in {areas}.",
+        },
+        "Rahu": {
+            "excellent": f"Unconventional vision and innovative breakthroughs propel rapid, impressive advancement in matters of {areas}.",
+            "favourable": f"Bold initiative and modern networking open expansive, fruitful horizons around {areas}.",
+            "mixed": f"Strict ethical adherence and realistic vetting prevent sudden illusions and keep your growth in {areas} genuine.",
+            "challenging": f"Steering clear of speculative shortcuts and grounding yourself in trusted advice protect you from disorientation in {areas}.",
+        },
+        "Ketu": {
+            "excellent": f"Profound intuitive insight and research depth unlock rare breakthroughs and spiritual clarity in {areas}.",
+            "favourable": f"Quiet dedication and freedom from superficial distractions enable deep, meaningful accomplishments in {areas}.",
+            "mixed": f"Embracing healthy simplification and letting go of outlived expectations bring peace and renewed purpose to {areas}.",
+            "challenging": f"Spiritual equanimity and staying grounded in daily duties illuminate your path through unexpected shifts in {areas}.",
+        },
+    }
+    advice = lord_tone_advice.get(lord, {}).get(tone, f"Focusing on {areas} brings meaningful personal growth.")
+    return f"{essence} {advice}"

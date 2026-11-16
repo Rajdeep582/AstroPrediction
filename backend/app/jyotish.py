@@ -28,6 +28,11 @@ YEAR_DAYS = 365.2425
 SIGNS = ("Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces")
 SIGN_LORD = ("Mars", "Venus", "Mercury", "Moon", "Sun", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Saturn", "Jupiter")
 PLANET_IDS = {"Sun": swe.SUN, "Moon": swe.MOON, "Mars": swe.MARS, "Mercury": swe.MERCURY, "Jupiter": swe.JUPITER, "Venus": swe.VENUS, "Saturn": swe.SATURN}
+ORD = {1: "1st", 2: "2nd", 3: "3rd"}
+
+
+def ordn(n: int) -> str:
+    return ORD.get(n, f"{n}th")
 SEVEN = tuple(PLANET_IDS)
 NINE = SEVEN + ("Rahu", "Ketu")
 AYANAMSA = {"lahiri": swe.SIDM_LAHIRI, "raman": swe.SIDM_RAMAN, "kp": swe.SIDM_KRISHNAMURTI, "yukteshwar": swe.SIDM_YUKTESHWAR, "fagan_bradley": swe.SIDM_FAGAN_BRADLEY}
@@ -785,6 +790,82 @@ PLANET_NATURE = {
 DIG_WORD = {"exalted": "very strong", "moolatrikona": "strong", "own": "strong", "friendly": "comfortable", "neutral": "average", "enemy": "uncomfortable", "debilitated": "weak"}
 
 
+HOUSE_LIVED_EXPERIENCE = {
+    1: {
+        "excellent": "Your foundational vitality and sense of personal direction operate with remarkable strength and clarity. You carry natural confidence and resilience, meeting life's turning points with composure and earning instinctive respect from those around you.",
+        "good": "Your personal vitality and self-expression are grounded on a stable, constructive footing. Methodical self-discipline and staying loyal to your authentic values help your character and reputation grow steadily year after year.",
+        "mixed": "Your physical stamina and personal confidence experience periodic fluctuations, asking you to balance ambitious self-expression with mindful self-care. Establishing consistent daily routines brings healthy equilibrium to your physical body and self-image.",
+        "challenging": "Your vitality and personal self-confidence invite patient, conscious nurturing. Early feelings of hesitation or health sensitivities serve as character-building experiences that cultivate deep inner resilience and self-reliance over time.",
+    },
+    2: {
+        "excellent": "Your financial acumen, family roots, and persuasive speech serve as an enduring source of strength and security. You possess a natural ability to preserve resources, articulate your ideas with dignity, and build generational assets through ethical means.",
+        "good": "Your financial stability and family relationships unfold constructively through regular, disciplined effort. Prudent budgeting, clear speech, and steady accumulation of savings ensure long-term domestic peace and material comfort.",
+        "mixed": "Your financial cash flow and family discussions experience alternating phases of ease and adjustment. Keeping financial commitments transparent and practicing gentle patience during family conversations preserves harmony and cushions temporary expenses.",
+        "challenging": "This sphere asks for deliberate financial prudence, strict avoidance of speculative shortcuts, and mindful speech during family disagreements. Methodical savings habits and conservative planning gradually build a rock-solid financial foundation.",
+    },
+    3: {
+        "excellent": "Your personal courage, enterprise, and communication skills are outstanding assets. You do not wait for external opportunities; your initiative, mental vigor, and resourceful problem-solving allow you to pioneer successful ventures and maintain vibrant connections.",
+        "good": "Your capacity for self-effort, hands-on skill development, and collaboration is steady and reliable. Pursuing creative goals with persistent daily application yields tangible accomplishments and cordial bonds with peers and siblings.",
+        "mixed": "Your drive and communication style benefit from focused channelization to avoid scattered energies. Selecting a few key creative initiatives and communicating with diplomatic warmth prevents avoidable misunderstandings and wasted effort.",
+        "challenging": "Self-confidence in your own initiatives requires conscious encouragement and perseverance. Viewing early hesitation as an invitation to refine your technical or creative craft helps you build genuine, self-made confidence that endures.",
+    },
+    4: {
+        "excellent": "Your domestic life, emotional peace of mind, and connection to your roots are deeply blessed. You possess a natural sanctuary in your home, enjoy comforting domestic harmony, and attract gains through property, vehicles, and maternal goodwill.",
+        "good": "Your home environment and inner emotional baseline are stable and supportive. Investing time in domestic comfort, nurturing family ties, and maintaining a peaceful living space provide a reliable anchor for your broader life endeavors.",
+        "mixed": "Your emotional contentment and domestic tranquility require conscious boundary-keeping against outer stress. Creating a quiet home routine and addressing household matters with calm pragmatism keeps your inner peace well protected.",
+        "challenging": "Domestic peace of mind and family adjustments invite patience, emotional maturity, and deliberate self-soothing. Cultivating an inner sanctuary independent of external surroundings helps transform domestic responsibilities into sources of quiet strength.",
+    },
+    5: {
+        "excellent": "Your creative intelligence, intellectual discrimination, and intuitive insight are luminous. You absorb complex knowledge with ease, give excellent counsel, and experience deep fulfillment through creative pursuits, intellectual mentorship, and children.",
+        "good": "Your intellectual faculties and creative instincts are constructive and well grounded. Methodical study, thoughtful investment planning, and warmhearted relationships with younger minds yield steady rewards and intellectual satisfaction.",
+        "mixed": "Your creative focus and romantic or parental expectations experience alternating seasons of inspiration and reflection. Balancing creative passions with structured follow-through keeps your intellectual projects on a productive track.",
+        "challenging": "Intellectual pursuits and creative expressions reward structured discipline, patience, and overcoming periodic self-doubt. Dedicated practice and seeking guidance from experienced mentors help your innate talents mature into dependable mastery.",
+    },
+    6: {
+        "excellent": "Your capacity to tackle obstacles, resolve workplace challenges, and outwork competitors is remarkably robust. You possess an indomitable work ethic, strong biological resistance, and a talent for bringing order to chaotic operational environments.",
+        "good": "Your daily work discipline and resistance to physical ailments are steady and supportive. Consistent attention to clean nutrition, stress management, and methodical problem-solving keeps workplace competitors and debts well managed.",
+        "mixed": "Workplace demands and physical stamina require mindful pacing to avoid burnout. Establishing firm boundaries around your working hours and prioritizing gut and nervous wellness keeps operational friction from becoming overwhelming.",
+        "challenging": "This sphere calls for steady resilience, structured daily habits, and cautious debt management. Viewing routine workplace hurdles as opportunities to refine your professional stamina ensures that you emerge stronger and wiser from every trial.",
+    },
+    7: {
+        "excellent": "Your marital happiness, capacity for partnership, and public rapport are richly supported. You attract capable, loyal collaborators and enjoy reciprocal warmth and mutual respect in your primary relationships, fostering shared long-term success.",
+        "good": "Your relationship foundation is constructive, cooperative, and reliable. Mutual loyalty, open communication, and fair division of responsibilities lay an enduring framework for domestic harmony and fruitful business alliances.",
+        "mixed": "Partnership dynamics invite emotional maturity, regular dialogue, and clear expectations. Allowing each other independence while addressing disagreements with gentle diplomacy prevents small misunderstandings from hardening into distance.",
+        "challenging": "Close partnerships serve as a primary mirror for cultivating personal patience and emotional unselfishness. Practicing compassionate listening, avoiding prideful standoffs, and seeking shared ground help navigate sensitive relationship seasons.",
+    },
+    8: {
+        "excellent": "You possess extraordinary psychological resilience, depth of perception, and the power to emerge revitalized from life's major turning points. You excel in investigating hidden matters, managing shared resources, and providing steady guidance during crises.",
+        "good": "Your capacity to handle life transitions, research deep subjects, and navigate joint finances is stable and dependable. Prudent management of shared commitments and cultivating emotional composure ensure enduring inner stamina.",
+        "mixed": "Unforeseen changes and joint financial matters require transparent agreements and emotional flexibility. Keeping financial records scrupulously organized and practicing mindful stress-relief cushions sudden life adjustments.",
+        "challenging": "This sphere invites conscious emotional surrender, absolute ethical transparency in financial dealings, and vigilant health care. Navigating transitions with patience and spiritual groundedness unlocks deep transformative wisdom.",
+    },
+    9: {
+        "excellent": "Your life journey is blessed by strong ethical clarity, fortunate mentor connections, and expansive philosophical perspective. Higher learning, principled conduct, and long journeys expand your horizons, bringing honor and benevolent opportunities.",
+        "good": "Your moral compass and educational pursuits provide a dependable, constructive guide for your choices. Respecting wise counselors, pursuing higher knowledge, and acting with integrity attract steady goodwill and fortunate openings.",
+        "mixed": "Your philosophical outlook and relationship with traditional belief systems evolve through questioning and personal experience. Keeping an open yet discerning mind helps you integrate inherited wisdom with your personal insights.",
+        "challenging": "Earning good fortune and finding the right mentorship require perseverance, humility, and steadfast adherence to your principles despite temporary disillusionments. Staying true to ethical conduct ensures that your luck gradually strengthens.",
+    },
+    10: {
+        "excellent": "Your professional contribution, executive competence, and vocational reputation carry outstanding cosmic backing. You are built for leadership, capable of organizing complex operations and earning durable public respect through ethical achievement.",
+        "good": "Your career trajectory promises steady, constructive advancement through dedicated craftsmanship and organizational reliability. Focusing on long-term skill acquisition and maintaining professional integrity ensure progressive recognition.",
+        "mixed": "Your professional journey unfolds in distinct phases of trial, adaptation, and eventual breakthrough. Balancing patience with proactive initiative helps you navigate occasional workplace politics and stay focused on your true vocation.",
+        "challenging": "Vocational recognition and professional stability invite dedicated perseverance, patience with organizational hierarchies, and unwavering craftsmanship. Early delays serve as rigorous training that prepares you for earned, unshakeable authority later in life.",
+    },
+    11: {
+        "excellent": "Your ability to fulfill long-term aspirations, attract influential friends, and generate multiple avenues of gains is powerfully supported. Your social goodwill and collaborative alliances consistently open rewarding avenues for collective progress.",
+        "good": "Your income potential and network of supportive allies are stable and constructive. Steady collaboration with reliable colleagues and setting realistic, phased goals ensure continuous realization of your material ambitions.",
+        "mixed": "Your social circles and financial inflows experience periodic recalibrations. Cultivating friendships based on genuine values rather than mere utility, while diversifying your income streams, keeps your progress on a dependable footing.",
+        "challenging": "Achieving major worldly goals rewards patient persistence, careful vetting of associates, and avoiding speculative group schemes. Focusing on authentic, incremental contributions gradually builds reliable social capital and enduring gains.",
+    },
+    12: {
+        "excellent": "Your inner contemplative life, capacity for restorative solitude, and connections to distant horizons are deeply enriching. You possess natural spiritual detachment, intuitive compassion, and an ability to do profound work behind the scenes or in foreign domains.",
+        "good": "Your ability to manage expenses, find quiet mental peace in solitude, and engage with foreign or philanthropic interests is constructive and balanced. Regular periods of quiet reflection restore your energy and sharpen your life perspective.",
+        "mixed": "Expenditures and sleep patterns require conscious regulation against stress-induced restlessness. Establishing calming evening routines and budgeting for unforeseen expenses ensure that your resources and nervous system remain well protected.",
+        "challenging": "This sphere calls for mindful financial budgeting, disciplined sleep hygiene, and guarding against feelings of isolation. Embracing quiet contemplation, practicing charitable giving, and letting go of past regrets bring profound spiritual renewal.",
+    },
+}
+
+
 def house_analysis(c: dict) -> list[dict]:
     sav = {h["house"]: h["points"] for h in c["ashtakavarga"]["by_house"]}
     out = []
@@ -801,29 +882,27 @@ def house_analysis(c: dict) -> list[dict]:
         score = max(5, min(98, score))
         
         # Paragraph 1: Cosmic configuration & technical facts
+        if occ:
+            occ_text = f"Occupied by {', '.join(occ)}, bringing {'; '.join(PLANET_NATURE[o] for o in occ)}. "
+            asp_text = f"Aspected by {', '.join(asp)}. " if asp else ""
+        elif asp:
+            occ_text = f"While this house has no resident planets, incoming aspects from {', '.join(asp)} actively channel energy into this domain alongside its lord {hh['lord']}. "
+            asp_text = ""
+        else:
+            occ_text = f"With no resident planets or direct aspects modifying this space, its outcomes are guided cleanly and primarily by its lord {hh['lord']}. "
+            asp_text = ""
+
         p1 = (f"{HOUSE_SIG[n][1]} bhava ({hh['sign']}) governs {HOUSE_SIG[n][0].lower()}. "
-              f"Its lord {hh['lord']} sits in house {L['house']} ({L['sign']}, {DIG_WORD[L['dignity']]})"
+              f"The {ordn(n)} lord {hh['lord']} is situated in house {L['house']} ({L['sign']}, {DIG_WORD[L['dignity']]})"
               + (", combust" if L["combust"] else "")
               + (", retrograde" if L["retrograde"] and hh["lord"] not in ("Rahu", "Ketu") else "") + ". "
-              + (f"Occupied by {', '.join(occ)}, bringing {'; '.join(PLANET_NATURE[o] for o in occ)}. " if occ else "With no planets occupying this house, outcomes unfold primarily through its lord and incoming planetary aspects. ")
-              + (f"Aspected by {', '.join(asp)}. " if asp else "")
-              + f"Sarvashtakavarga contributes {sav[n]} points ({'above' if sav[n] >= 28 else 'below'} the neutral benchmark of 28).")
+              + occ_text
+              + asp_text
+              + f"Sarvashtakavarga contributes {sav[n]} points to the {ordn(n)} house ({'above' if sav[n] >= 28 else 'below'} the neutral benchmark of 28).")
         
-        # Paragraph 2: Everyday lived experience and practical guidance
-        theme_short = HOUSE_SIG[n][0].split(',')[0].lower()
-        if score >= 70:
-            p2 = (f"In your everyday life, this area operates as an active strength and protective anchor. You have natural confidence, ease, and resilience here, "
-                  f"enabling you to make progressive, rewarding strides when pursuing {theme_short}. "
-                  "Consistently honouring your commitments in this domain magnifies these favorable planetary blessings.")
-        elif score >= 55:
-            p2 = (f"This life area offers steady and constructive opportunities. While progress requires methodical effort and patience, "
-                  f"your foundation in {theme_short} is stable and supportive. Focus on clear priorities and avoid unnecessary rush to achieve lasting satisfaction.")
-        elif score >= 45:
-            p2 = (f"This domain presents a balanced blend of opportunities and learning curves. Experiences around {theme_short} "
-                  "will evolve over time, teaching you valuable discrimination and adaptability. Thoughtful planning and avoiding hasty reactions bring positive equilibrium.")
-        else:
-            p2 = (f"This house invites conscious care, patience, and deliberate self-discipline. Early delays or friction regarding {theme_short} "
-                  "serve as valuable training ground, strengthening your inner stamina. Traditional remedies, ethical consistency, and steady habits yield gradual, enduring turnaround.")
+        # Paragraph 2: House-specific lived experience and practical guidance
+        tier = "excellent" if score >= 70 else "good" if score >= 55 else "mixed" if score >= 45 else "challenging"
+        p2 = HOUSE_LIVED_EXPERIENCE[n][tier]
         
         text = f"{p1}\n\n{p2}"
         out.append({"house": n, "name": HOUSE_SIG[n][1], "significations": HOUSE_SIG[n][0], "sign": hh["sign"], "lord": hh["lord"], "lord_house": L["house"], "lord_dignity": L["dignity"],
@@ -865,11 +944,21 @@ def _life_area_desc(name: str, tone: str, strong: list[int], weak: list[int], ho
         }
     }
     lead = lead_map.get(name, {}).get(tone, "This life area unfolds progressively with balanced effort.")
-    guidance = (
-        f" Your running Mahadasha actively energizes this sphere, making this a pivotal chapter for deliberate initiative and meaningful milestones."
-        if has_dasha else
-        f" Aligning your day-to-day actions with the natural wisdom of significators {', '.join(karakas)} provides steady clarity and confidence."
-    )
+    dasha_guidance_map = {
+        "career": " Your running Mahadasha actively energizes this sphere, making this an opportune window for career consolidation, taking on leadership responsibility, and building durable professional equity.",
+        "finance": " Because your active Mahadasha directly activates your financial houses, this chapter favors strategic capital preservation, methodical savings, and avoiding hasty speculative commitments.",
+        "health": " Your running Mahadasha directs significant energy toward your physical constitution, highlighting the value of structured daily routines, restorative rest, and proactive wellness habits.",
+        "relationships": " As your running planetary period activates the partnership axis, this phase brings mutual understanding, shared domestic goals, and relational patience into clear focus.",
+        "education": " Your active Mahadasha stimulates your intellectual houses, creating a fertile season for acquiring specialized skills, deep study, and scholarly mastery.",
+    }
+    general_guidance_map = {
+        "career": f" Aligning your work approach with career significators {', '.join(karakas)} brings steady clarity, professional respect, and long-term vocational stability.",
+        "finance": f" Channeling the prudent wisdom of wealth significators {', '.join(karakas)} ensures consistent asset growth and sound financial discrimination.",
+        "health": f" Honoring the natural vitality represented by {', '.join(karakas)} supports consistent physical resilience and balanced daily energy.",
+        "relationships": f" Cultivating the harmonious qualities of relationship significators {', '.join(karakas)} fosters mutual trust, emotional safety, and shared warmth.",
+        "education": f" Drawing upon the intellectual strengths of {', '.join(karakas)} sharpens your conceptual grasp and keeps your academic curiosity vibrant.",
+    }
+    guidance = dasha_guidance_map.get(name, "") if has_dasha else general_guidance_map.get(name, "")
     return f"{lead}{guidance}"
 
 
@@ -891,7 +980,14 @@ def life_areas(c: dict) -> dict:
         if dl:
             ruled = [h for h in range(1, 13) if lord_of_house(c, h) == dl]
             if set(ruled) & set(houses) or P(c, dl)["house"] in houses:
-                dasha_note = f" Current {dl} Mahadasha directly activates this area."
+                dasha_notes = {
+                    "career": f" The active {dl} Mahadasha directly stimulates your career avenues.",
+                    "finance": f" The active {dl} Mahadasha directly energizes your financial prospects.",
+                    "health": f" The active {dl} Mahadasha channels vital influence into your bodily vitality.",
+                    "relationships": f" The active {dl} Mahadasha brings partnership themes into primary focus.",
+                    "education": f" The active {dl} Mahadasha strongly supports your academic and intellectual growth.",
+                }
+                dasha_note = dasha_notes.get(name, f" Current {dl} Mahadasha directly influences this life sphere.")
         facts = (f"{focus} Key houses {', '.join(map(str, houses))}; karaka(s) {', '.join(karakas)}. "
                  + (f"Supportive: house {', '.join(map(str, strong))}. " if strong else "")
                  + (f"Needs care: house {', '.join(map(str, weak))}. " if weak else "")

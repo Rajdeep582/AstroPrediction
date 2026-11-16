@@ -388,9 +388,31 @@ def planet_reading(c: dict, name: str) -> dict:
         p1 += f"As the lord of your {rules_str} house{'s' if len(fr['rules']) > 1 else ''}, it weaves matters of {linked_themes} into this domain. "
 
     # Paragraph 2: Functional nature and manifestation
+    planet_support_note = {
+        "Sun": "You can draw upon this solar vitality to lead projects with confidence and earned authority.",
+        "Moon": "This placement enriches your emotional composure and helps you cultivate warm, supportive relationships.",
+        "Mars": "Your focused courage and disciplined drive will turn ambitious plans into tangible achievements.",
+        "Mercury": "Your sharp analytical discernment and articulate communication will open lucrative doors.",
+        "Jupiter": "Its benevolent wisdom acts as an enduring protective shield, attracting helpful mentors and sound judgment.",
+        "Venus": "This graceful signature brings aesthetic joy, social warmth, and harmonious partnership milestones.",
+        "Saturn": "Your patience and unswerving work ethic build unshakeable professional foundations over time.",
+        "Rahu": "Embracing innovative methods and bold visions accelerates your worldly advancement.",
+        "Ketu": "Cultivating quiet contemplation and research uncovers profound inner wisdom and clarity.",
+    }
+    planet_caution_note = {
+        "Sun": "Tempering pride, practicing humility with mentors, and honoring the Sun on Sundays bring valuable stabilization.",
+        "Moon": "Establishing grounding daily routines, staying near peaceful water, and calming evening rest restore emotional equilibrium.",
+        "Mars": "Channeling fiery energy into regular physical exercise and measured speech protects against rash disputes.",
+        "Mercury": "Structuring your daily schedule and setting screen-free breaks protect your nervous system from overthinking.",
+        "Jupiter": "Practicing ethical moderation, realistic financial planning, and honoring Thursday charities soothe this planetary pressure.",
+        "Venus": "Cultivating relationship maturity, financial budgeting, and artistic simplicity restores balanced harmony.",
+        "Saturn": "Exercising unhurried patience, respecting service staff, and looking after joint health yield gradual, enduring turnaround.",
+        "Rahu": "Staying strictly grounded in ethical practices and avoiding speculative shortcuts prevent disorienting illusions.",
+        "Ketu": "Embracing spiritual simplicity, meditation, and letting go of past burdens illuminate your inner path.",
+    }
     if score >= 62 and not weak_dig:
         p2 = (f"Functionally {fr['label'].split(' — ')[0].lower()}, {name} operates with solid strength (score {score}/100). "
-              f"It provides reliable support for {PLANET_GOOD[name]}. You will notice its positive contributions unfolding steadily through your efforts.")
+              f"It provides reliable support for {PLANET_GOOD[name]}. {planet_support_note.get(name, '')}")
     elif score >= 45:
         p2 = (f"Holding a mixed strength score of {score}/100, {name}'s influence brings both opportunities and lessons. "
               f"While it can deliver {PLANET_GOOD[name]}, its {p['dignity']} condition suggests occasional "
@@ -398,11 +420,14 @@ def planet_reading(c: dict, name: str) -> dict:
     else:
         p2 = (f"Placed under strain with a score of {score}/100, {name} asks for conscious mindfulness. "
               f"Its more demanding tendencies—such as {PLANET_HARD[name]}—can show up when you rush or act without foresight. "
-              f"Disciplined habits and targeted remedies help balance this influence significantly.")
+              f"{planet_caution_note.get(name, 'Disciplined habits and patient self-care help balance this influence.')}")
 
-    # Paragraph 3: Classical life effect and actionable counsel
+    # Paragraph 3: Lived expression and holistic synthesis
     life, caution = M.PLANET_IN_HOUSE[name][h]
-    p3 = f"In daily life, {life} To make the best of this, {caution}"
+    p3 = (f"In your day-to-day experience, having {name} situated in the {ordn(h)} house ({p['sign']}) directs your instincts toward "
+          f"{HOUSE_THEME[h].split(',')[0]}. When operating at its best, this placement allows you to approach this domain with "
+          f"{NAT_KARAKA[name].split(',')[0]} and purposeful focus. The key to mastering this placement lies in conscious balance—expressing "
+          f"{name}'s strengths while remaining mindful of {PLANET_HARD[name].split(',')[0]}.")
 
     text = f"{p1}\n\n{p2}\n\n{p3}"
 
@@ -577,12 +602,39 @@ def dasha_analysis(c: dict) -> list[dict]:
 
         # Rich multi-sentence summary
         acts_str = ", ".join(HOUSE_THEME[h].split(",")[0] for h in acts)
+        theme_body = J.DASHA_THEMES[lord]
+        prefix = f"During the {lord} Mahadasha ({md['years']} years), "
+        if theme_body.startswith(prefix):
+            theme_body = theme_body[len(prefix):]
+            theme_body = theme_body[0].upper() + theme_body[1:] if theme_body else ""
+        dasha_good_note = {
+            "Sun": "With favorable solar backing, this period rewards stepping into executive leadership and acting with dignified integrity.",
+            "Moon": "With supportive lunar grace, this period nourishes your emotional peace of mind, family milestones, and public goodwill.",
+            "Mars": "With strong Martian vitality, this period turns decisive initiative, courage, and technical enterprise into tangible victories.",
+            "Mercury": "With sharp Mercurial clarity, this period rewards commercial skill, analytical learning, and versatile networking.",
+            "Jupiter": "With benevolent Jupiterian support, this period brings expansive wisdom, academic honors, and lasting prosperity.",
+            "Venus": "With gracious Venusian blessings, this period enhances relationship harmony, creative arts, and refined material comforts.",
+            "Saturn": "With steady Saturnian endurance, this period rewards patient discipline, methodical effort, and building lasting structures.",
+            "Rahu": "With dynamic Rahu energy, this period opens unconventional breakthroughs, modern technologies, and rapid worldly advancement.",
+            "Ketu": "With profound Ketu insight, this period fosters research breakthroughs, spiritual clarity, and freedom from unnecessary attachments.",
+        }
+        dasha_challenging_note = {
+            "Sun": "Navigating this period calls for tempering pride, managing stress, and practicing diplomatic humility with authority figures.",
+            "Moon": "This period asks for emotional grounding, gentle self-care, and avoiding impulsive decisions during mood fluctuations.",
+            "Mars": "Channeling this energy requires patience, regular physical exercise, and avoiding hasty arguments or reckless speed.",
+            "Mercury": "Staying balanced calls for periodic mental rest, avoiding overthinking, and keeping daily commitments well organized.",
+            "Jupiter": "Navigating this phase rewards realistic expectations, avoiding over-optimism, and maintaining dietary moderation.",
+            "Venus": "This period invites emotional maturity, mindful budgeting, and avoiding superficial relationship expectations.",
+            "Saturn": "Persevering through this phase requires unhurried patience, looking after joint health, and trusting in gradual results.",
+            "Rahu": "Guarding against risky shortcuts, illusions, or speculative ventures ensures that your ambition yields genuine success.",
+            "Ketu": "Navigating sudden shifts calls for spiritual equanimity, staying grounded in daily routines, and letting go of outlived patterns.",
+        }
+        note = dasha_good_note.get(lord, "") if good else dasha_challenging_note.get(lord, "")
         summary = (
-            f"During the {lord} Mahadasha ({md['years']} years), the cosmic spotlight shines on your {acts_str}. "
-            f"{J.DASHA_THEMES[lord]} "
-            f"In your Kundli, {lord} serves as a {fr['label'].split(' — ')[0].lower()} planet, occupying the {ordn(p['house'])} house "
+            f"The {lord} Mahadasha spans {md['years']} years, turning the primary momentum of your life toward {acts_str}. "
+            f"In your Kundli, {lord} acts as a {fr['label'].split(' — ')[0].lower()} planet, occupying the {ordn(p['house'])} house "
             f"in {p['sign']} ({p['dignity']}). "
-            f"{'You can expect steady advancement, earned rewards and solid recognition in these areas.' if good else 'While meaningful growth takes place, it calls for steady discipline, patience and avoiding hasty shortcuts.'}"
+            f"{theme_body} {note}"
         )
 
         highlights = [f"Productive advancement in {HOUSE_THEME[h]}" for h in acts if h not in J.DUSTHANA][:3] or [f"Inner transformation and wisdom through {HOUSE_THEME[acts[0]]}"]
@@ -598,10 +650,17 @@ def dasha_analysis(c: dict) -> list[dict]:
             sc = _period_score(c, lord, ad["lord"])
             sub_acts = _activated(c, ad["lord"])
             sub_focus = [HOUSE_THEME[h].split(",")[0] for h in sub_acts][:3]
-            ad_summary = (
-                f"The {ad['lord']} Antardasha within {lord} Mahadasha brings {PLANET_GOOD[ad['lord']] if sc >= 55 else PLANET_HARD[ad['lord']]}. "
-                f"It actively energizes your {', '.join(sub_focus)}, combining {lord}'s overarching chapter with {ad['lord']}'s immediate daily focus."
-            )
+            sub_focus_str = ", ".join(sub_focus)
+            if sc >= 55:
+                ad_summary = (
+                    f"The {ad['lord']} Antardasha within {lord} Mahadasha activates matters of {sub_focus_str}, "
+                    f"bringing favorable opportunities for {PLANET_GOOD[ad['lord']].split(',')[0]} and constructive progress."
+                )
+            else:
+                ad_summary = (
+                    f"The {ad['lord']} Antardasha within {lord} Mahadasha activates matters of {sub_focus_str}, "
+                    f"calling for patient discernment regarding {PLANET_HARD[ad['lord']].split(',')[0]}."
+                )
             ads.append({
                 "lord": ad["lord"], "start": ad["start"], "end": ad["end"], "current": ad["current"],
                 "score": sc, "tone": tone(sc), "more": _ad_more(c, lord, ad, sc, birth),
@@ -617,7 +676,7 @@ def dasha_analysis(c: dict) -> list[dict]:
             "past": end < now, "score": score, "tone": tone(score), "functional": fr["label"],
             "activates": acts, "summary": summary, "highlights": highlights, "cautions": cautions,
             "antardashas": ads,
-            "plain": M.dasha_plain(lord, tone(score), acts) + " " + M.PLANET_IN_HOUSE[lord][p["house"]][0],
+            "plain": M.dasha_plain(lord, tone(score), acts),
             "more": {
                 "effects": life_effects(c, lord, score), "remedy": lord_remedy(lord),
                 "houses": [{"house": h, "theme": HOUSE_THEME[h], "why": "occupied" if h == p["house"] else "governed"} for h in acts],
@@ -628,6 +687,97 @@ def dasha_analysis(c: dict) -> list[dict]:
         if (start - birth).days / J.YEAR_DAYS > 100:
             break
     return out
+
+
+LAGNA_LORD_LIFE_PURPOSE: dict[int, str] = {
+    1: "Having your Lagna lord seated in the first house is a strong blessing for self-reliance, physical vitality, and clear personal identity. You are the chief architect of your own destiny, preferring to lead from the front with dignity and self-assurance. Your life unfolds through personal enterprise, and you command natural respect wherever you go.",
+    2: "With your Lagna lord seated in the second house, your core life purpose is intimately tied to family heritage, values, and creating lasting financial stability. You derive genuine fulfillment from protecting loved ones, speaking with wisdom and sincerity, and carefully building tangible assets that outlast temporary trends.",
+    3: "With your Lagna lord placed in the third house, your life journey is driven by personal courage, initiative, and creative communication. You are someone who refuses to rely passively on good luck; instead, you carve out your own path through persistent self-effort, hands-on enterprise, and the lively sharing of ideas.",
+    4: "Having your Lagna lord residing in the fourth house roots your personal fulfillment deeply in home, family peace, and emotional contentment. You have an enduring bond with your mother or ancestral lineage, and you thrive best when your domestic sanctuary is harmonious, secure, and surrounded by quiet comforts.",
+    5: "With your Lagna lord placed in the fifth house, your vital life energy expresses itself through creative intelligence, higher learning, and joyful mentorship. You possess a sharp, reflective intellect with an intuitive grasp of ethics and good judgment. Your life gains deep meaning through creative contributions and guiding the next generation.",
+    6: "With your Lagna lord situated in the sixth house, your life purpose is forged through dedication, problem-solving, and overcoming real-world obstacles. You possess strong mental resilience, not backing down from competition or hard work. You shine in service-oriented vocations where bringing order to difficult situations makes an immediate difference.",
+    7: "Having your Lagna lord stationed in the seventh house indicates that your personal growth is mirror-reflected through relationships, partnerships, and public engagement. You thrive in collaboration, learning the deepest truths about yourself through marriage and meaningful alliances. Your diplomacy and ability to connect with diverse minds are key life assets.",
+    8: "With your Lagna lord positioned in the eighth house, your life is marked by profound inner resilience, transformative transitions, and a natural instinct for uncovering hidden truths. Rather than settling for superficial comforts, you are drawn to deep inquiry, psychological insight, and research. Significant turning points in life regularly renew your strength.",
+    9: "With your Lagna lord placed in the auspicious ninth house, your life orientation is guided by moral principles, higher knowledge, and a pursuit of wisdom. You have natural respect for mentors, diverse cultures, and lifelong learning. Good fortune and spiritual clarity accompany you when you remain true to your ethical compass.",
+    10: "Having your Lagna lord commanding the tenth house is a premier signature for professional prominence, social responsibility, and visible contribution. You carry an innate desire to leave an honorable mark on your chosen field. You are built for leadership, earning public respect through sustained craftsmanship and ethical conduct.",
+    11: "With your Lagna lord located in the eleventh house, your life purpose flourishes through collective networks, long-term aspirations, and steady material achievement. You possess a gift for building friendships with knowledgeable allies and turning ambitious visions into tangible success. Your efforts yield reliable gains and social goodwill.",
+    12: "With your Lagna lord residing in the twelfth house, your life journey carries a reflective, contemplative depth, often drawing you toward foreign connections, spiritual study, or meaningful work behind the scenes. You find profound peace in quiet solitude, possessing an innate generosity and freedom from petty worldly rivalries.",
+}
+
+CAREER_LORD_HOUSE: dict[int, str] = {
+    1: "Your career ruler placed in the first house brings your professional identity directly into your personal presence. You excel in vocations where you are the public face of your work, thriving in independent ventures, consultancy, or roles where your personal initiative and reputation drive the entire enterprise forward.",
+    2: "With your career lord seated in the second house, your vocation is closely tied to finance, speech, consulting, or family enterprise. You do exceptionally well in fields requiring persuasive communication, wealth advisory, or administrative stewardship, where your voice and reliability build lasting professional trust.",
+    3: "Having your career lord in the third house favors vocations demanding hands-on initiative, writing, digital media, commerce, or technical communication. You perform best in dynamic work environments that involve short travel, constant coordination, and the freedom to experiment with fresh strategies.",
+    4: "Your career lord placed in the fourth house directs your professional talents toward real estate, education, infrastructure, agriculture, or human resource welfare. You excel in creating secure, supportive systems for organizations, often achieving your greatest vocational satisfaction in familiar or domestic-facing domains.",
+    5: "With your career ruler in the fifth house, your professional calling is fueled by intellectual innovation, strategic counsel, teaching, or creative arts. You have natural instincts for problem-solving and mentoring, shining when allowed to design new solutions rather than executing repetitive routines.",
+    6: "Having your career lord positioned in the sixth house aligns your profession with service, healthcare, legal analysis, auditing, or crisis management. You are a tireless problem-solver who earns respect by tackling complex operational difficulties that others avoid, rising steadily through discipline and resilience.",
+    7: "With your career ruler occupying the seventh house, your professional success is intimately tied to public relations, partnerships, client management, or international trade. You thrive in negotiation, mediation, and customer-facing roles, where mutual collaboration and tactful diplomacy open lucrative doors.",
+    8: "Your career lord situated in the eighth house draws your vocation toward specialized research, forensic investigation, data analytics, tax advisory, or esoteric sciences. You excel at unearthing hidden value, steering organizations through confidential transitions, and solving intricate problems requiring quiet, dedicated concentration.",
+    9: "Having your career ruler in the ninth house points toward high-level advisory roles, higher education, legal practice, publishing, or international consultancy. Your career is guided by strong ethical values and vision, earning you honor through mentorship, specialized wisdom, and cross-cultural collaborations.",
+    10: "With your career lord reigning in its own tenth house, you possess outstanding executive potential, institutional leadership, and natural professional authority. You are capable of carrying heavy organizational responsibilities, earning sustained public recognition through disciplined competence and unwavering integrity.",
+    11: "Having your career ruler seated in the eleventh house ensures that your professional efforts translate into substantial gains, influential industry networks, and corporate achievements. You excel in leading large teams, managing client networks, and turning strategic projects into profitable, recognized realities.",
+    12: "With your career lord in the twelfth house, your professional path frequently connects with foreign organizations, multinational firms, research laboratories, or institutions operating away from the public eye. You achieve significant success through international assignments, behind-the-scenes strategy, or philanthropic projects.",
+}
+
+WEALTH_LORD_HOUSE: dict[int, str] = {
+    1: "Your wealth ruler seated in the first house indicates that your earning capacity is driven entirely by your personal skill, reputation, and direct initiative. You have the ability to generate income through your own craftsmanship, and your financial standing rises hand-in-hand with your personal standing in life.",
+    2: "With your wealth lord strong in the second house, you possess natural financial intelligence and a steady instinct for capital preservation. You believe in methodical accumulation, prudent cash-flow management, and creating tangible assets that offer lasting security to your family across generations.",
+    3: "Having your wealth lord in the third house connects your earnings with personal initiative, commercial trade, writing, digital skills, or enterprise. Your financial prosperity grows as you proactively take calculated risks, market your skills, and leverage modern communication channels.",
+    4: "With your wealth ruler resting in the fourth house, your financial assets accumulate securely through real estate, residential property, ancestral resources, and vehicle investments. You prioritize domestic stability and building a debt-free home base that provides enduring peace of mind.",
+    5: "Your wealth lord positioned in the fifth house blesses you with sharp investment acumen, creative revenue ideas, and gains through intellectual capital. You have an instinct for spotting emerging opportunities, but build the most durable wealth when balancing calculated investments with disciplined diversification.",
+    6: "With your wealth lord in the sixth house, your finances grow steadily through professional service, disciplined day-to-day work, and careful budgeting. You are cautious with debt and manage operational costs with precision, steadily turning regular savings into substantial long-term wealth.",
+    7: "Having your wealth ruler in the seventh house indicates that financial growth is enhanced through joint ventures, marriage, business alliances, or commercial trade. You benefit greatly from transparent partnership agreements and customer-focused commerce that builds enduring goodwill.",
+    8: "With your wealth ruler placed in the eighth house, financial milestones often come through unexpected avenues, family inheritances, joint holdings, insurance, or strategic restructuring. Maintaining absolute transparency in tax and joint financial records ensures your resources remain secure and resilient against sudden shifts.",
+    9: "Having your wealth lord stationed in the ninth house is an auspicious mark of righteous prosperity, ethical commerce, and gains through higher learning or international dealings. You enjoy financial luck when your business practices honor moral principles and you invest in expanding your horizons.",
+    10: "With your wealth lord commanding the tenth house, your earnings flow directly from your professional standing, government links, or executive leadership. You earn honorable remuneration for high-level contributions, and your commercial reputation serves as your greatest financial asset.",
+    11: "Your wealth lord residing in the eleventh house creates a potent combination for ongoing capital growth, varied income streams, and fruitful financial networks. Your savings habits combine harmoniously with your ability to monetize opportunities, resulting in substantial long-term accumulation.",
+    12: "With your wealth ruler in the twelfth house, financial management calls for conscious budgeting, prudent tax planning, and guarding against leakage through impulsive expenditures. You do well with international investments, institutional funds, and charitable contributions that bring meaningful satisfaction.",
+}
+
+MARRIAGE_LORD_HOUSE: dict[int, str] = {
+    1: "With your partnership lord seated in your first house, your spouse is deeply devoted to you, bringing a lively, magnetic presence into your life. Your partner desires to be an equal participant in your personal ambitions, and your marital happiness flourishes when you make decisions together as a unified team.",
+    2: "Having your marriage lord in the second house indicates that partnership significantly enriches your family life and financial stability. Your spouse is likely to be family-oriented, eloquent, and supportive of domestic traditions, contributing constructively to household savings and shared prosperity.",
+    3: "With your 7th lord positioned in the third house, your relationship thrives on intellectual friendship, shared travels, and lively everyday banter. Your partner is dynamic, encouraging your personal initiatives and standing beside you as an enthusiastic confidant in all life ventures.",
+    4: "Having your partnership ruler in the fourth house roots marital happiness in domestic comfort, emotional security, and shared home peace. Your spouse values a tranquil home environment and shares deep respect for family welfare, helping to create a welcoming, emotionally grounded sanctuary.",
+    5: "With your marriage lord placed in the fifth house, your relationship is blessed with romance, mutual creative appreciation, and shared joy through children. You are drawn to a partner who possesses warmth, intellectual sparkle, and a refined sense of humor, keeping the romance fresh over the years.",
+    6: "Having your 7th lord in the sixth house suggests that partnership dynamics require conscious patience, practical teamwork, and clear boundaries. Your spouse is hard-working and dutiful, but daily workplace stress can occasionally spill into home life; resolving minor differences through calm communication prevents lingering friction.",
+    7: "With your marriage lord dignified in its own seventh house, you are blessed with an honorable, capable, and supportive life companion. Your spouse commands natural respect, values marital fidelity, and shares your vision for a balanced, dignified partnership built on reciprocal admiration.",
+    8: "Your partnership ruler situated in the eighth house points to a deeply bonding, emotionally transformative union that evolves significantly over time. Your spouse brings deep intuition and shared financial acumen into your life; cultivating mutual vulnerability and open trust ensures an unbreakable connection.",
+    9: "Having your 7th lord in the ninth house indicates a noble, cultured partner who brings good fortune, ethical grounding, and higher perspective into your life. Your spouse may come from a distinct cultural or intellectual background, inspiring you toward spiritual growth and expanded horizons.",
+    10: "With your marriage lord occupying the tenth house, your spouse is ambitious, professionally accomplished, and commands genuine public respect. Your marital partnership enhances your social standing, and you thrive when actively encouraging each other's vocational milestones.",
+    11: "Having your partnership ruler in the eleventh house promises a relationship that feels like an enduring, supportive friendship. Your spouse shares your long-term dreams, introduces you to inspiring social circles, and helps turn your shared aspirations into tangible reality.",
+    12: "With your 7th lord residing in the twelfth house, your marital bond carries a private, gentle, and deeply spiritual tone. Your spouse may have international ties or an introspective nature, and your relationship flourishes best away from external interference, thriving on quiet mutual understanding and compassion.",
+}
+
+HEALTH_CONSTITUTION: dict[int, str] = {
+    1: "Having your vitality ruler well placed in the first house provides a naturally robust constitution, quick recuperative ability, and high physical stamina. Your body responds promptly to clean living; maintaining regular physical exercise and adequate hydration keeps your energy radiant throughout the seasons.",
+    2: "With your vitality lord in the second house, constitutional balance is intimately linked to your diet, throat health, and speech patterns. Maintaining regular, nourishing meal times and avoiding overly rich or spicy foods protects your vocal cords and digestive tract from undue irritation.",
+    3: "Having your health ruler in the third house bestows agile nervous stamina and physical dexterity, though restlessness can sometimes cause energy dips. Mindful care of your shoulders, arms, and upper respiratory tract—along with periodic screen-free rest—preserves your vitality.",
+    4: "With your vitality lord resting in the fourth house, physical health is directly influenced by emotional serenity and domestic peace of mind. Cultivating restful sleep habits, gentle cardiovascular exercise, and spending time in serene environments protects your chest and digestive equilibrium.",
+    5: "Your vitality ruler in the fifth house supports good metabolic vitality and digestive fire, though mental over-exertion can strain the stomach. Balancing intellectual work with joyful outdoor recreation and maintaining clean eating habits keeps your vital energy well regulated.",
+    6: "Having your vitality lord in the sixth house gives your immune system an active capacity to combat seasonal ailments, though chronic stress from overwork is your primary vulnerability. Prioritizing structured daily rest, gut health, and avoiding unnecessary tension keeps your stamina strong and resilient.",
+    7: "With your vitality ruler placed in the seventh house, your physical well-being benefits greatly from social harmony and balanced relationships. Paying mindful attention to your kidneys, lower back, and daily water intake ensures that your bodily fluids and energy flow smoothly.",
+    8: "Having your vitality lord situated in the eighth house confers deep recuperative longevity and survival stamina through physical turning points. It is essential to manage chronic stress, protect excretory and reproductive health, and avoid extreme physical exhaustion through disciplined moderation.",
+    9: "With your vitality ruler in the ninth house, your constitutional vitality is strong, supported by an active lifestyle and an optimistic disposition. Mindful care of your hips, thighs, and liver health through wholesome nutrition and regular walking helps you sustain long-term physical vigor.",
+    10: "Having your health ruler commanding the tenth house supports strong physical stamina adapted for sustained professional activity. However, you must be careful not to sacrifice proper sleep or regular meals for work obligations; caring for your joints, knees, and posture ensures enduring stamina.",
+    11: "With your vitality lord in the eleventh house, physical energy remains generally favorable and responsive to healthy habits. Gentle daily walks, keeping circulation active in your calves and ankles, and socializing with uplifting friends keep your vitality buoyant.",
+    12: "Having your vitality ruler residing in the twelfth house suggests a sensitive constitution that absorbs external environmental stress quickly. Ensuring quality sleep, practicing calming breathwork (pranayama), and protecting your feet and lymphatic balance provide essential restoration for your nervous system.",
+}
+
+EDUCATION_INTELLECT: dict[int, str] = {
+    1: "Your ruler of intellect placed in the first house gives a brilliant, curious mind that grasps concepts quickly and enjoys independent inquiry. You learn best when you can apply theoretical knowledge to real-life situations, excelling in self-directed study and innovative intellectual pursuits.",
+    2: "With your 5th lord in the second house, your learning style is thorough, methodical, and verbally gifted. You possess strong memory retention and an aptitude for languages, economics, mathematics, or classical subjects, communicating your knowledge with natural clarity and poise.",
+    3: "Having your ruler of intellect situated in the third house endows you with mental agility, sharp analytical reasoning, and hands-on technical skills. You flourish in modern communications, digital technologies, creative writing, and practical research where diverse streams of data are synthesized.",
+    4: "With your 5th lord resting in the fourth house, your intellectual growth is nurtured by deep foundational study, traditional academia, and reflective contemplation. You absorb complex principles thoroughly when studying in a quiet, peaceful environment that fosters deep concentration.",
+    5: "Having your ruler of intellect dignified in its own fifth house is an exceptional mark of creative genius, strategic foresight, and profound scholarship. Your analytical reasoning is penetrating, allowing you to master intricate subjects, mentor others effortlessly, and produce original intellectual work.",
+    6: "With your 5th lord positioned in the sixth house, your intellect shines in critical analysis, diagnostic problem-solving, medicine, law, and technical troubleshooting. You are not intimidated by detail-heavy or challenging syllabi, deriving genuine satisfaction from solving complex puzzles that stump others.",
+    7: "Having your ruler of intellect in the seventh house indicates a collaborative learning orientation. You absorb concepts fastest through intellectual debate, peer discussions, and interactive seminars, excelling in fields involving public psychology, international affairs, and commercial negotiation.",
+    8: "With your 5th lord seated in the eighth house, your intellectual mind is forensic, probing, and naturally drawn to uncover hidden mechanisms. You excel in deep academic research, data science, psychological analysis, and advanced technical or esoteric inquiries where patience unlocks hidden discoveries.",
+    9: "Having your ruler of intellect in the ninth house is a supreme blessing for higher learning, philosophical depth, and academic distinction. You are naturally drawn to university education, law, ethics, and cross-disciplinary research, absorbing wisdom easily under the guidance of knowledgeable professors and mentors.",
+    10: "With your 5th lord in the tenth house, your educational achievements directly feed your professional authority and vocational standing. You excel in applied sciences, executive management, governance, and specialized professional certifications that earn tangible industry recognition.",
+    11: "Having your ruler of intellect placed in the eleventh house ensures that your knowledge and analytical abilities translate into fruitful group collaborations and intellectual networks. You learn eagerly from knowledgeable peers and excel in large-scale research initiatives, technology forums, and future-oriented studies.",
+    12: "With your 5th lord in the twelfth house, your intellectual gifts flourish in creative imagination, deep reflective contemplation, and behind-the-scenes research. You do exceptionally well in foreign universities, independent scholarly writing, or fields requiring intuitive insight beyond standard textbooks.",
+}
 
 
 def key_predictions(c: dict, planets: list[dict], dashas: list[dict]) -> list[dict]:
@@ -644,136 +794,145 @@ def key_predictions(c: dict, planets: list[dict], dashas: list[dict]) -> list[di
             f"You carry yourself with natural dignity, and people readily notice your authenticity and quiet capability. "
             f"{sp[5]}")
     p_p2 = (f"Your chart's ruling planet (Lagna lord), {asc['sign_lord']}, sits in the {ordn(l1['house'])} house ({l1['sign']}, {l1['dignity']}). "
-            f"This directs your primary life vitality and inner drive toward {HOUSE_THEME[l1['house']]}. "
-            f"{M.PLANET_IN_HOUSE[asc['sign_lord']][l1['house']][0]}")
+            f"This directs your primary life vitality and inner drive toward {HOUSE_THEME[l1['house']].split(',')[0]}. "
+            f"{LAGNA_LORD_LIFE_PURPOSE[l1['house']]}")
     p_p3 = (f"On an emotional and psychological level, having your Moon in {moon['sign']} within {moon['nakshatra']} nakshatra "
             f"(ruled by {moon['nakshatra_lord']}) endows you with a {NAK_PROFILE[J.NAKSHATRAS.index(moon['nakshatra'])][2]} emotional nature. "
             f"You find inner contentment when your surroundings are harmonious and your emotional roots feel secure.")
-    p_p4 = (f"In everyday practice, your greatest strengths are {sp[3]}. "
-            f"The primary watch-out is {sp[4]}. Grounding daily routines, time in quiet reflection, and conscious patience serve you best.")
+    p_p4 = (f"In everyday action, you operate with {sp[3]}. "
+            f"The primary area for conscious balance is {sp[4]}. Grounding daily routines, quiet self-reflection, and unhurried patience will always serve you best.")
     personality_text = f"{p_p1}\n\n{p_p2}\n\n{p_p3}\n\n{p_p4}"
 
     items = [{"area": "Personality", "score": planet_strength(c, asc["sign_lord"]), "text": personality_text}]
 
     # 2. Career — 4 rich paragraphs
     car_a = la["career"]
+    car_desc = car_a["summary"].split("\n\n")[-1]
     c10 = c["houses"][9]
     l10 = J.P(c, c10["lord"])
     c_p1 = (f"Your professional life is governed primarily by the 10th house ({c10['sign']}, ruled by {c10['lord']}), "
-            f"supported by the 6th house of work routine and the 2nd and 11th houses of financial gains. "
+            f"supported by the 6th house of daily work and the 11th house of achievements. "
             f"Overall vocational outlook is rated {car_a['outlook']} (score {car_a['score']}/100). "
-            f"{car_a['summary']}")
-    c_p2 = (f"Your 10th lord {c10['lord']} sits in the {ordn(l10['house'])} house ({l10['sign']}, {l10['dignity']}). "
-            f"{'Because this planet is well dignified, career advancement comes through merit, leadership and steady expertise.' if l10['dignity'] in ('exalted', 'moolatrikona', 'own', 'friendly') else 'Professional milestones require patient cultivation, overcoming occasional bureaucracy and staying loyal to your long-term craft.'} "
-            f"{M.PLANET_IN_HOUSE[c10['lord']][l10['house']][0]}")
-    c_p3 = (f"Natural career significators (karakas) Sun, Saturn and Mercury influence your work style. "
-            f"You flourish in roles that allow you to exercise autonomy, structured responsibility and clear problem-solving. "
+            f"{car_desc}")
+    c_p2 = (f"Your 10th lord {c10['lord']} occupies the {ordn(l10['house'])} house ({l10['sign']}, {l10['dignity']}). "
+            f"{CAREER_LORD_HOUSE[l10['house']]}")
+    c_p3 = (f"Natural career significators Sun, Saturn, and Mercury indicate that your work thrives on clear responsibility, professional ethics, and autonomy. "
+            f"You excel when given space to solve problems systematically and take pride in the quality of your output. "
             f"Collaborative alliances and maintaining professional ethics provide your greatest long-term stability.")
-    c_p4 = (f"In daily work, keep long-term goals clearly defined and avoid impulsive job shifts during temporary workplace pressures. "
-            f"{'The running planetary period directly energizes this sphere, making this a pivotal chapter for career elevation.' if cur and (10 in cur['activates'] or 6 in cur['activates']) else 'Steady skill refinement and expanding professional networks lay the foundation for your next major career ascent.'}")
+    c_p4 = (f"To build durable career success, keep your long-term vision clear and avoid rash moves during temporary workplace stress. "
+            + (f"Because your running planetary period energizes career houses, this is a pivotal chapter for taking purposeful initiative and consolidating your standing."
+               if cur and any(h in cur["activates"] for h in (10, 6, 11)) else
+               "Focus on continuous skill refinement and cultivating trustworthy professional networks, which will yield substantial rewards in coming career cycles."))
     items.append({"area": "Career", "score": car_a["score"], "text": f"{c_p1}\n\n{c_p2}\n\n{c_p3}\n\n{c_p4}"})
 
     # 3. Wealth (Finance) — 4 rich paragraphs
     fin_a = la["finance"]
+    fin_desc = fin_a["summary"].split("\n\n")[-1]
     c2 = c["houses"][1]
     c11 = c["houses"][10]
     l2 = J.P(c, c2["lord"])
     w_p1 = (f"Financial prosperity in your Kundli combines accumulated savings (2nd house in {c2['sign']}), "
-            f"revenue and social gains (11th house in {c11['sign']}), and the blessings of past merit (5th and 9th houses). "
+            f"regular revenue (11th house in {c11['sign']}), and the blessings of past merit (5th and 9th houses). "
             f"Your wealth potential is assessed as {fin_a['outlook']} (score {fin_a['score']}/100). "
-            f"{fin_a['summary']}")
-    w_p2 = (f"Your 2nd lord of savings, {c2['lord']}, occupies the {ordn(l2['house'])} house ({l2['sign']}). "
-            f"{M.PLANET_IN_HOUSE[c2['lord']][l2['house']][0]} "
-            f"Natural wealth significators Jupiter and Venus indicate that assets build most reliably through disciplined accumulation and ethical commerce.")
-    w_p3 = (f"Your financial temperament favors building tangible, lasting security. "
-            f"You are resourceful, but should remain vigilant against speculative get-rich-quick schemes or impulsive spending during emotional highs. "
-            f"Diversifying your investments into land, secure instruments and proven value creates lasting generational stability.")
-    w_p4 = (f"To maximize prosperity, maintain clear bookkeeping and establish an emergency reserve. "
-            f"{'Your current dasha period directly activates financial houses, favoring calculated investments and revenue growth.' if cur and (2 in cur['activates'] or 11 in cur['activates']) else 'Focus on steady compounding and skill development, which will bear full fruit in the upcoming prosperity cycles.'}")
+            f"{fin_desc}")
+    w_p2 = (f"Your 2nd lord of savings and assets, {c2['lord']}, sits in the {ordn(l2['house'])} house ({l2['sign']}, {l2['dignity']}). "
+            f"{WEALTH_LORD_HOUSE[l2['house']]}")
+    w_p3 = (f"Your financial temperament naturally leans toward creating dependable, long-term security. "
+            f"You are resourceful and appreciate quality, but should stay vigilant against speculative shortcuts or emotional spending during high-stress periods. "
+            f"Diversifying your savings into secure instruments and tangible assets protects your family across cycles.")
+    w_p4 = (f"To maximize your prosperity, maintain orderly bookkeeping and build a reliable contingency fund. "
+            + (f"Your current dasha actively stimulates your wealth axis, making this an ideal window for methodical capital accumulation and prudent investments."
+               if cur and any(h in cur["activates"] for h in (2, 11, 5, 9)) else
+               "Steady compounding and prudent financial habits established now will blossom fully in the upcoming prosperity cycles."))
     items.append({"area": "Wealth", "score": fin_a["score"], "text": f"{w_p1}\n\n{w_p2}\n\n{w_p3}\n\n{w_p4}"})
 
     # 4. Marriage & relationships — 4 rich paragraphs
     rel_a = la["relationships"]
+    rel_desc = rel_a["summary"].split("\n\n")[-1]
     c7 = c["houses"][6]
     l7 = J.P(c, c7["lord"])
     r_p1 = (f"Partnership and marriage are read primarily from the 7th house ({c7['sign']}, ruled by {c7['lord']}), "
-            f"supported by the 5th house of romance and the 2nd house of family life. "
-            f"The general relationship outlook is {rel_a['outlook']} (score {rel_a['score']}/100). "
-            f"{rel_a['summary']}")
-    r_p2 = (f"Your 7th lord {c7['lord']} is positioned in the {ordn(l7['house'])} house ({l7['sign']}, {l7['dignity']}). "
-            f"{M.PLANET_IN_HOUSE[c7['lord']][l7['house']][0]} "
-            f"Natural relationship significator Venus indicates that you seek a partnership built on mutual respect, affection and shared values.")
-    r_p3 = (f"In close relationships, you appreciate open communication, emotional safety and shared domestic warmth. "
-            f"When challenges arise, they often stem from differing expectations or unspoken assumptions. "
-            f"Allowing your partner independence while expressing your own needs with gentle clarity keeps your bond vibrant.")
-    r_p4 = (f"Practical relationship advice: cultivate patience during stressful seasons and avoid turning small domestic differences into matters of pride. "
-            f"{'Your running dasha actively influences relationship houses, bringing personal connections into sharp focus.' if cur and 7 in cur['activates'] else 'Nurture mutual interests and shared laughter, which form the strongest anchor for long-term marital happiness.'}")
+            f"supported by the 5th house of affection and the 2nd house of family harmony. "
+            f"The general relationship outlook is rated {rel_a['outlook']} (score {rel_a['score']}/100). "
+            f"{rel_desc}")
+    r_p2 = (f"Your 7th lord of partnership, {c7['lord']}, is positioned in the {ordn(l7['house'])} house ({l7['sign']}, {l7['dignity']}). "
+            f"{MARRIAGE_LORD_HOUSE[l7['house']]}")
+    r_p3 = (f"In close relationships, you value genuine emotional safety, mutual loyalty, and open communication. "
+            f"When friction occurs, it is usually because expectations remain unspoken or personal boundaries feel stretched. "
+            f"Giving each other breathing room and speaking with gentle honesty keeps your companionship warm and vibrant.")
+    r_p4 = (f"Practical relationship advice: nurture shared interests, celebrate small moments of domestic joy, and avoid turning everyday differences into matters of personal pride. "
+            + (f"Your running dasha actively influences your relationship houses, bringing personal connections into sharp, rewarding focus."
+               if cur and any(h in cur["activates"] for h in (7, 2, 5)) else
+               "Patient understanding and mutual respect remain the enduring pillars of your long-term marital happiness."))
     items.append({"area": "Marriage & relationships", "score": rel_a["score"], "text": f"{r_p1}\n\n{r_p2}\n\n{r_p3}\n\n{r_p4}"})
 
     # 5. Health — 4 rich paragraphs
     hea_a = la["health"]
+    hea_desc = hea_a["summary"].split("\n\n")[-1]
     c6 = c["houses"][5]
     l1 = J.P(c, asc["sign_lord"])
-    h_p1 = (f"Physical wellness in your chart is anchored by your Ascendant vitality, resistance to ailments (6th house in {c6['sign']}), "
-            f"and overall longevity (8th house). "
+    h_p1 = (f"Physical vitality in your chart is anchored by your Ascendant constitution, biological resistance (6th house in {c6['sign']}), "
+            f"and longevity indicators. "
             f"Your baseline vitality is rated {hea_a['outlook']} (score {hea_a['score']}/100). "
-            f"{hea_a['summary']}")
-    h_p2 = (f"Lagna lord {asc['sign_lord']} in the {ordn(l1['house'])} house gives a {sp[0].lower()} constitution. "
-            f"{M.PLANET_IN_HOUSE[asc['sign_lord']][l1['house']][0]} "
-            f"The Sun provides your foundational stamina, while the Moon governs fluid balance, digestion and nervous equilibrium.")
-    h_p3 = (f"Areas deserving regular mindfulness include managing daily stress, staying properly hydrated, and listening to your body's early signals of fatigue. "
+            f"{hea_desc}")
+    h_p2 = (f"Your vitality ruler, {asc['sign_lord']}, sits in the {ordn(l1['house'])} house ({l1['sign']}, {l1['dignity']}). "
+            f"{HEALTH_CONSTITUTION[l1['house']]}")
+    h_p3 = (f"Mindful wellness habits to cultivate: listen closely to your body's early signals of fatigue, stay well hydrated throughout the day, and maintain regular sleep timings. "
             f"{sp[8]} "
             f"Avoid burning the candle at both ends, and establish consistent sleep and meal timings.")
-    h_p4 = (f"Health guidance: moderate physical exercise, outdoor walks in fresh air, and mindful breathing practices (pranayama) help maintain your natural vitality. "
-            f"{'During this dasha, pay extra attention to restorative rest and avoid overworking.' if cur and (6 in cur['activates'] or 8 in cur['activates']) else 'Consistent daily habits and a balanced diet provide an enduring shield against illness.'}")
+    h_p4 = (f"Physical exercise suited to your constitution—such as brisk outdoor walking, gentle yoga, and deep pranayama breathing—clears accumulated stress and revitalizes your nervous system. "
+            + (f"During your running dasha, pay extra attention to restorative rest and avoid chronic physical overwork."
+               if cur and any(h in cur["activates"] for h in (6, 8, 1)) else
+               "Consistent daily routines and a nourishing, wholesome diet form your strongest shield against seasonal ailments."))
     items.append({"area": "Health", "score": hea_a["score"], "text": f"{h_p1}\n\n{h_p2}\n\n{h_p3}\n\n{h_p4}"})
 
     # 6. Education — 4 rich paragraphs
     edu_a = la["education"]
+    edu_desc = edu_a["summary"].split("\n\n")[-1]
     c5 = c["houses"][4]
     c9 = c["houses"][8]
     l5 = J.P(c, c5["lord"])
     e_p1 = (f"Your intellectual growth combines foundational schooling (4th house), analytical intelligence (5th house in {c5['sign']}), "
             f"and higher wisdom (9th house in {c9['sign']}). "
-            f"Your academic potential is rated {edu_a['outlook']} (score {edu_a['score']}/100). "
-            f"{edu_a['summary']}")
-    e_p2 = (f"Your 5th lord of intellect, {c5['lord']}, sits in the {ordn(l5['house'])} house ({l5['sign']}). "
-            f"{M.PLANET_IN_HOUSE[c5['lord']][l5['house']][0]} "
-            f"Mercury gives you curiosity and quick comprehension, while Jupiter blesses you with deep conceptual understanding.")
-    e_p3 = (f"You learn best when subjects have meaningful practical application or philosophical depth rather than rote memorization. "
-            f"Your memory and analytical faculties are sharp, allowing you to master complex technical, artistic or professional disciplines.")
-    e_p4 = (f"Educational advice: continue reading and acquiring specialized certifications throughout your life, as lifelong learning keeps your mind youthful. "
-            f"{'Your running dasha actively stimulates your intellectual houses, making this an ideal time for study and skill upgrades.' if cur and (5 in cur['activates'] or 9 in cur['activates']) else 'Channel your curiosity into focused research, and share your insights generously through mentorship.'}")
+            f"Your academic potential is assessed as {edu_a['outlook']} (score {edu_a['score']}/100). "
+            f"{edu_desc}")
+    e_p2 = (f"Your 5th lord of intellect, {c5['lord']}, resides in the {ordn(l5['house'])} house ({l5['sign']}, {l5['dignity']}). "
+            f"{EDUCATION_INTELLECT[l5['house']]}")
+    e_p3 = (f"You absorb knowledge with greatest depth when concepts connect with practical reality or philosophical meaning, rather than dry memorization. "
+            f"Mercury blesses you with swift comprehension, while Jupiter enriches your perspective with enduring ethical wisdom.")
+    e_p4 = (f"Lifelong learning keeps your mind youthful; dedicate regular time to reading, independent research, or acquiring modern certifications in your field. "
+            + (f"Your running dasha actively stimulates your intellectual houses, making this a prime window for academic achievement and expanding your knowledge base."
+               if cur and any(h in cur["activates"] for h in (5, 9, 4)) else
+               "Channel your intellectual curiosity into focused research, and share your insights generously with others through mentorship."))
     items.append({"area": "Education", "score": edu_a["score"], "text": f"{e_p1}\n\n{e_p2}\n\n{e_p3}\n\n{e_p4}"})
 
-    # 7. Current period (Running Dasha) — 3-4 rich paragraphs
+    # 7. Current period (Running Dasha) — 4 rich paragraphs
     if cur:
         ad = next((x for x in cur["antardashas"] if x["current"]), None)
         cur_score = ad["score"] if ad else cur["score"]
-        cp_p1 = (f"You are currently traversing the {cur['lord']} Mahadasha"
-                 + (f" and {ad['lord']} Antardasha (running until {ad['end'][:10]}). " if ad else ". ")
-                 + f"{cur['summary']}")
-        cp_p2 = (f"The energetic tone of this phase is {cur['tone']}. "
-                 f"The primary areas energized right now are your {', '.join(HOUSE_THEME[h].split(',')[0] for h in cur['activates'][:3])}. "
-                 f"{M.dasha_plain(cur['lord'], cur['tone'], cur['activates'])}")
-        cp_p3 = (f"During this window, progress unfolds best when you align your efforts with {cur['lord']}'s natural nature ({PLANET_GOOD[cur['lord']]}). "
-                 f"Keep a watchful eye on potential blind spots: {cur['cautions'][0] if cur['cautions'] else 'maintain balanced moderation in all commitments.'}")
+        ad_str = f" and {ad['lord']} Antardasha (active until {ad['end'][:10]})" if ad else ""
+        cp_p1 = (f"You are currently traversing the {cur['lord']} Mahadasha{ad_str}. "
+                 f"In this life chapter, {cur['lord']}'s overarching influence sets your broad life trajectory, while "
+                 + (f"{ad['lord']}'s sub-period governs immediate day-to-day priorities. " if ad else "your daily affairs reflect its direct planetary rhythm. ")
+                 + f"Together, this period concentrates cosmic energy primarily upon your {', '.join(HOUSE_THEME[h].split(',')[0] for h in cur['activates'][:3])}.")
+        cp_p2 = (f"The prevailing tone of this phase is {cur['tone']}. "
+                 f"When navigated with conscious awareness, {cur['lord']}'s influence encourages personal maturity, purposeful initiative, and aligning your actions with noble principles.")
+        cp_p3 = (f"To make the best of this window, maintain unhurried discipline and keep your focus aligned with {cur['lord']}'s natural wisdom. "
+                 + (f"Remain mindful around {cur['cautions'][0].lower()}." if cur["cautions"] else "Avoid impulsive shortcuts during stressful weeks."))
         lord_name = cur["lord"]
-        default_advice = f"Regularity, focus and honoring {lord_name} on its traditional day provide steady calm."
-        adv = ad["more"]["advice"] if ad and "more" in ad and "advice" in ad["more"] else default_advice
-        cp_p4 = f"Practical guidance: {adv}"
+        day = J.REMEDY_DB.get(lord_name, {}).get("day", "favorable")
+        cp_p4 = (f"Practical guidance: establishing regularity in your work and taking quiet moments of contemplation on {day}s brings grounding stability and peace of mind.")
         items.append({"area": "Current period", "score": cur_score, "text": f"{cp_p1}\n\n{cp_p2}\n\n{cp_p3}\n\n{cp_p4}"})
 
     # 8. Next major period — 3 rich paragraphs
     if nxt:
-        np_p1 = (f"Your next major life chapter will be the {nxt['lord']} Mahadasha, commencing on {nxt['start'][:10]} "
-                 f"(around age {nxt['age_from']:.0f}) and spanning {nxt['years']} years. "
-                 f"This transition marks a natural evolution in your life's primary focus and priorities.")
-        np_p2 = (f"This upcoming phase is anticipated to be {nxt['tone']}. "
-                 f"It will activate your {', '.join(HOUSE_THEME[h].split(',')[0] for h in nxt['activates'][:3])}, "
-                 f"bringing opportunities for {nxt['highlights'][0].lower() if nxt['highlights'] else 'significant personal and professional growth'}.")
-        np_p3 = (f"Preparation guidance: use your present period to resolve unfinished business and build durable foundations. "
-                 f"As the {nxt['lord']} period approaches, aligning your mindset with {PLANET_GOOD[nxt['lord']]} will ensure a smooth, rewarding transition into this new chapter.")
+        next_acts_str = ", ".join(HOUSE_THEME[h].split(",")[0] for h in nxt["activates"][:3])
+        np_p1 = (f"Looking ahead, your next major life chapter will be the {nxt['lord']} Mahadasha, commencing on {nxt['start'][:10]} "
+                 f"(around age {nxt['age_from']:.0f}) and extending over {nxt['years']} years. "
+                 f"This transition marks an organic evolution in your life's primary focus, turning cosmic momentum toward your {next_acts_str}.")
+        np_p2 = (f"Anticipated as a {nxt['tone']} phase, this upcoming chapter will open fresh doors for personal maturation, new responsibilities, and meaningful achievements.")
+        np_p3 = (f"Preparation guidance: utilize the remaining span of your current dasha to resolve lingering obligations and build solid foundations. "
+                 f"Welcoming the {nxt['lord']} period with quiet confidence, ethical clarity, and patient resolve will ensure a smooth and rewarding transition.")
         items.append({"area": "Next major period", "score": nxt["score"], "text": f"{np_p1}\n\n{np_p2}\n\n{np_p3}"})
 
     return items
