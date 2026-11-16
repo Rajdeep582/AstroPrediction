@@ -1,14 +1,41 @@
 /* ═════════ Scroll performance (loaded last) ═════════ */
 
-/* 1. No backdrop blur on anything that content scrolls underneath: the blur would be recomputed every
-      frame. Near-opaque fills give the same look. */
-.mobile-top, .land-nav, .auth-top, .bottom-nav, .loc-list, .loc-chip, .an-nav, .sheet, .sheet-scrim, .toast {
-  -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
-.mobile-top, .land-nav, .auth-top { background: rgba(8,8,20,.97) !important; }
-.bottom-nav { background: rgba(14,14,32,.98) !important; }
+/* 1. Mobile sticky bars: opaque fill and no blur so scrolling doesn't recompute blurs every frame.
+      Desktop headers remain transparent over the starry sky background. */
+@media (max-width: 768px) {
+  .mobile-top, .land-nav, .auth-top {
+    background: rgba(8,8,20,.97) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
+  }
+  .bottom-nav {
+    background: rgba(14,14,32,.98) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
+  }
+  .loc-list, .loc-chip, .sheet, .sheet-scrim, .toast {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
 
-/* 2. Fixed/sticky bars on their own GPU layer → never repainted while the page moves under them. */
-.mobile-top, .land-nav, .auth-top, .bottom-nav, .an-nav, .route-bar { transform: translateZ(0); will-change: transform; backface-visibility: hidden; }
+/* 2. Desktop navbar / top headers: ensure seamless transparency without box-shadow or black bars */
+@media (min-width: 769px) {
+  .land-nav, .auth-top {
+    background: transparent !important;
+    box-shadow: none !important;
+    transform: none !important;
+    will-change: auto !important;
+  }
+}
+
+.an-nav { transform: translateZ(0); will-change: transform; backface-visibility: hidden; }
 .sky, .sky > *, .constellations { transform: translateZ(0); backface-visibility: hidden; }
 
 /* 3. While actively scrolling, pause decorative loops that repaint pixels every frame
